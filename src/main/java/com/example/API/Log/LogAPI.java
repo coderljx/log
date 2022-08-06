@@ -28,6 +28,10 @@ public class LogAPI {
     private final LogDaoService logDevelopDaoService;
     private final String Topic = "log";
 
+    public void a (){
+
+    }
+
     @Autowired()
     public LogAPI(Rocket rocket,
                   LogDaoService logDevelopDaoService) {
