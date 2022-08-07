@@ -15,22 +15,18 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import java.sql.Array;
 import java.sql.Timestamp;
 import java.text.ParseException;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @RestController
 @RequestMapping ("/log")
 public class LogAPI {
-    private final Logger log = LoggerFactory.getLogger(LogAPI.class);
+    private final Logger mylog = LoggerFactory.getLogger(LogAPI.class);
     private final Rocket rocket;
     private final LogDaoService logDevelopDaoService;
     private final String Topic = "log";
-
-    public void a (){
-
-    }
 
     @Autowired()
     public LogAPI(Rocket rocket,
@@ -118,7 +114,7 @@ public class LogAPI {
         try {
             List<Log> findall =
                     this.logDevelopDaoService.findall(PageRequest.of(from, to));
-            return new Response<>(findall);
+            return new Response<>(findall,findall.size());
         }catch (Exception e){
             e.printStackTrace();
             return new Response<>(Coco.ServerError);
@@ -129,31 +125,38 @@ public class LogAPI {
     public Response SelectesTrem(@RequestBody Map<String, Object> maps) {
 
         int size;
-        String value;
-        Map<String, String> payloads;
-        String filed = "";
-        String rule = "";
+        int page;
+        Map<String, Object> payloads;
+        String filed;
+        String operat = "";
+        List<String> value;
+        String[] opear = new String[]{"=",">","<",">=","<="};
         try {
             size = maps.get("size") == null ?
                     20 : (Integer) maps.get("size");
-            Object payload = maps.get("payload");
-            if (payload instanceof Map) {
-                payloads = (Map<String, String>) payload;
-                filed = payloads.get("filed");
-                value = payloads.get("value");
-                rule = payloads.get("rule");
-            } else {
-                return new Response<>(Coco.ParamsTypeError);
-            }
+            page = maps.get("page") == null ?
+                    1 : (Integer) maps.get("size");
+            if (!(maps.get("payload") instanceof Map)) return new Response<>(Coco.ParamsTypeError);
+
+            payloads = (Map<String, Object>) maps.get("payload");
+            filed = (String) payloads.get("filed");
+            boolean Valifiled = Maputil.MapExistsBean(filed, LogMessage.class);
+            if (!Valifiled) return new Response<>(Coco.ParamsTypeError);
+
+            if (!(payloads.get("rule") instanceof Map)) return new Response<>(Coco.ParamsTypeError);
+
+            Map<String,Object> rule = (Map<String, Object>) payloads.get("rule");
+            operat = Objects.equals(rule.get("operat"), "") ? "=" : (String) rule.get("operat");
+            value = (List<String>) rule.get("value");
         } catch (ClassCastException e) {
             return new Response<>(Coco.ParamsTypeError);
         }
 
-        if (!filed.equals("")  && !value.equals("")) {
+        if (Arrays.asList(opear).contains(operat)){
             try {
                 boolean b = Maputil.MapExistsBean(filed,LogMessage.class);
                 if (b) {
-                    return this.logDevelopDaoService.SearchTrem(filed,value,rule,size);
+                    return this.logDevelopDaoService.SearchTrem(filed,operat,size,page, value);
                 }
                 throw new RuntimeException();
             }catch (Exception e){
@@ -174,44 +177,55 @@ public class LogAPI {
     public Response Selectes(@RequestBody Map<String, Object> maps) {
 
         int size;
-        String value;
-        Map<String, String> payloads = null;
+        int page;
+        Map<String, Object> payloads;
         String filed;
+        String operat = "";
+        List<String> value;
+        String[] opear = new String[]{"=",">","<",">=","<="};
         try {
             size = maps.get("size") == null ?
                     20 : (Integer) maps.get("size");
-            Object payload = maps.get("payload");
-            if (payload instanceof Map) {
-                payloads = (Map<String, String>) payload;
-                filed = payloads.get("filed");
-                value = payloads.get("value");
-            } else {
-                return new Response<>(Coco.ParamsTypeError);
-            }
+            page = maps.get("page") == null ?
+                    1 : (Integer) maps.get("size");
+            if (!(maps.get("payload") instanceof Map)) return new Response<>(Coco.ParamsTypeError);
+
+            payloads = (Map<String, Object>) maps.get("payload");
+            filed = (String) payloads.get("filed");
+            boolean Valifiled = Maputil.MapExistsBean(filed, LogMessage.class);
+            if (!Valifiled) return new Response<>(Coco.ParamsTypeError);
+
+            if (!(payloads.get("rule") instanceof Map)) return new Response<>(Coco.ParamsTypeError);
+
+            Map<String,Object> rule = (Map<String, Object>) payloads.get("rule");
+            operat = Objects.equals(rule.get("operat"), "") ? "=" : (String) rule.get("operat");
+            value = (List<String>) rule.get("value");
         } catch (ClassCastException e) {
             return new Response<>(Coco.ParamsTypeError);
         }
 
-        if (!filed.equals("")  && !value.equals("")) {
+
+        if (Arrays.asList(opear).contains(operat)){
             try {
-                List<Log> searchlike = this.logDevelopDaoService.Searchlike(filed, value, size);
-                return new Response<>(searchlike);
+                List<Log> searchlike = this.logDevelopDaoService.Searchlike(filed, operat, size , page, String.valueOf(value));
+                return new Response<>(searchlike, searchlike.size());
             }catch (Exception e){
                 return new Response<>(Coco.ServerError);
             }
-        } else {
-            return new Response<>(Coco.ParamsNumError);
         }
+        return new Response<>(Coco.ParamsError);
     }
 
 
     @PostMapping ("/search/likemutil")
     public Response Selectesl(@RequestBody Map<String, Object> maps) {
         Integer size = 0;
+        Integer page = 0;
         Map<String, Object> stringObjectMap;
         try {
             Map<String,Object> payload;
             size = (Integer) maps.get("size");
+            page = (Integer) maps.get("page");
             if (maps.get("payload") instanceof Map) {
                 payload = (Map<String,Object>) maps.get("payload");
                 LogMessage LogMessage = Maputil.MapToObject(payload, LogMessage.class);
@@ -228,7 +242,7 @@ public class LogAPI {
         if (stringObjectMap.size() == 0)  return new Response<>(Coco.ParamsNumError);
 
         try {
-            return this.logDevelopDaoService.SearchlikeMutil(stringObjectMap, size);
+            return this.logDevelopDaoService.SearchlikeMutil(stringObjectMap,size,page);
         }catch (Exception e){
             e.printStackTrace();
             return new Response<>(Coco.ParamsError);

@@ -4,6 +4,7 @@ package com.example.Service;
 import com.example.Dao.LogDao;
 import com.example.ES.LogES;
 import com.example.Pojo.Log;
+import com.example.Pojo.comptroller;
 import com.example.Run.Email;
 import com.example.Run.EmailProperties;
 import com.example.Run.EsTemplate;
@@ -14,6 +15,7 @@ import com.example.Utils.TimeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
@@ -73,43 +75,85 @@ public class LogDaoService {
         return logES.findAllBy(request);
     }
 
-    public Response<List<Log>> SearchTrem(String filed, String value, String rule , int size) throws ParseException {
-        if (!filed.equals("createdate"))
+    public Response<List<Log>> SearchTrem(String filed,  String rule , int size,int page,List<String> value) throws ParseException {
+        int num = value.size();
+        if (num > 2) return null;
+
+        if (!filed.equals("recorddate"))
         {
-            String Newfiled = Maputil.ReplaceAddKeyword(filed);
-            return this.Parse(this.esTemplate.SearchTerm(Newfiled,value,size, Log.class));
+            if (num == 1){
+                String Newfiled = Maputil.ReplaceAddKeyword(filed);
+                return this.Parse(this.esTemplate.SearchTerm(Newfiled,value.get(0),size,page, Log.class));
+            }
         }
 
-        long parselong = TimeUtils.Parselong(value);
+        long parselong = 0L;
+        long parselongend = 0L;
+        if (num == 1) {
+            parselong = TimeUtils.Parselong(value.get(0));
+        }
+        if (num == 2) {
+            parselong = TimeUtils.Parselong(value.get(0));
+            parselongend = TimeUtils.Parselong(value.get(1));
+        }
         PageRequest of = PageRequest.of(0, size);
-//        if (rule.equals("="))
-//            return this.logES.findByRecorddate(parselong,of);
-//
-//        if (rule.equals(">=") || rule.equals(">"))
-//            return this.logES.findByRecorddateAfter(parselong,of);
-//
-//        if (rule.equals("<=") || rule.equals("<") )
-//            return this.logES.findByRecorddateBefore(parselong,of);
+        List<Log> logs = new ArrayList<>();
+        if (rule.equals("="))
+            logs = this.logES.findByRecorddate(parselong,of);
 
-//        if (rule.equals("<>"))
-//            return this.logES.findByDateBetween(parselong,of);
+        if (rule.equals(">=") || rule.equals(">"))
+            logs = this.logES.findByRecorddateAfter(parselong,of);
 
-        return null;
+        if (rule.equals("<=") || rule.equals("<") )
+            logs = this.logES.findByRecorddateBefore(parselong,of);
+
+        if (parselongend != 0L)
+            logs = this.logES.findByRecorddateBetween(parselong,parselongend ,of);
+
+        return new Response<>(logs);
     }
 
-    public List<Log> Searchlike(String filed, String value, int size){
-        SearchHits searchHits = this.esTemplate.SearchLike(filed, value, size, Log.class);
+    public List<Log> Searchlike(String filed, String rule, int size,int page,String... value) throws ParseException {
+        String values = "";
+        int num = value.length;
+        if (value.length == 1) {
+            values = value[0];
+        }
+        SearchHits searchHits = this.esTemplate.SearchLike(filed, values, size,page, Log.class);
         List<SearchHit<Log>> searchHits1 = searchHits.getSearchHits();
         List<Log> datas = new ArrayList<>();
         for (int i = 0; i < searchHits1.size(); i++) {
             SearchHit<Log> comptrollerSearchHit = searchHits1.get(i);
             datas.add(comptrollerSearchHit.getContent());
         }
+
+        long parselong = 0L;
+        long parselongend = 0L;
+        if (num == 2) {
+            parselong = TimeUtils.Parselong(value[0]);
+            parselongend = TimeUtils.Parselong(value[1]);
+        }
+        PageRequest of = PageRequest.of(size,page);
+        if (filed.equals("recorddate")){
+            if (rule.equals("="))
+                datas = this.logES.findByRecorddate(parselong,of);
+
+            if (rule.equals(">=") || rule.equals(">"))
+                datas = this.logES.findByRecorddateAfter(parselong,of);
+
+            if (rule.equals("<=") || rule.equals("<") )
+                datas = this.logES.findByRecorddateBefore(parselong,of);
+
+            if (parselongend != 0L)
+                datas = this.logES.findByRecorddateBetween(parselong,parselongend ,of);
+        }
+
+
         return datas;
     }
 
-    public Response<List<Log>> SearchlikeMutil(Map<String,Object> maps, int size){
-        SearchHits<Log> searchHits = this.esTemplate.SearchLikeMutil2(maps, size, Log.class);
+    public Response<List<Log>> SearchlikeMutil(Map<String,Object> maps, int size,int page){
+        SearchHits<Log> searchHits = this.esTemplate.SearchLikeMutil2(maps, size, page,Log.class);
         return this.Parse(searchHits);
     }
 

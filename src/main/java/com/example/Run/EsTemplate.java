@@ -3,6 +3,7 @@ package com.example.Run;
 import co.elastic.clients.elasticsearch._types.query_dsl.MatchAllQuery;
 import com.example.Utils.Maputil;
 import org.elasticsearch.index.query.*;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
 import org.springframework.data.elasticsearch.core.IndexOperations;
@@ -40,10 +41,10 @@ public class EsTemplate {
      * @param value 查询的value
      * @param cls 返回的类，该类是index，要存在索引
      */
-    public <T> SearchHits<T> SearchTerm(String key, String value, int size ,Class<T> cls){
+    public <T> SearchHits<T> SearchTerm(String key, String value, int size,int page ,Class<T> cls){
         NativeSearchQuery build = new NativeSearchQueryBuilder()
                 .withQuery(new TermQueryBuilder(key, value))  //总的查询
-                .withPageable(Pageable.ofSize(size)) // 设置分页
+                .withPageable(PageRequest.of(size,page)) // 设置分页
                 .build();//设置bool查
 
         return elasticsearchRestTemplate.search(build,cls);
@@ -64,10 +65,10 @@ public class EsTemplate {
     /**
      * 模糊查询， 单条件
      */
-    public <T> SearchHits<T> SearchLike(String key, String value,int size , Class<T> cls){
+    public <T> SearchHits<T> SearchLike(String key, String value,int size , int page, Class<T> cls){
         NativeSearchQuery build = new NativeSearchQueryBuilder()
                 .withQuery(new MatchPhraseQueryBuilder(key,value))
-                .withPageable(Pageable.ofSize(size))
+                .withPageable(PageRequest.of(size,page))
                 .build();
         return elasticsearchRestTemplate.search(build,cls);
     }
@@ -77,7 +78,7 @@ public class EsTemplate {
      * 多条件模糊查询
      * @param maps 查询的字段以及对应的值
      */
-    public <T> SearchHits<T> SearchLikeMutil2(Map<String,Object> maps ,int size, Class<T> cls){
+    public <T> SearchHits<T> SearchLikeMutil2(Map<String,Object> maps ,int size,int page, Class<T> cls){
         BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
         String[] Keys = Maputil.GetMapKey(maps);
         for (String key : Keys) {
@@ -85,7 +86,7 @@ public class EsTemplate {
         }
         NativeSearchQuery build = new NativeSearchQueryBuilder()
                 .withQuery(boolQueryBuilder)
-                .withPageable(Pageable.ofSize(size))
+                .withPageable(PageRequest.of(size,page))
                 .build();
         return elasticsearchRestTemplate.search(build,cls);
     }

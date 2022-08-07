@@ -1,10 +1,13 @@
 package com.example.Service;
 
 import com.example.Dao.comptrollerDao;
+import com.example.Pojo.Log;
 import com.example.Pojo.comptroller;
 import com.example.Run.EsTemplate;
 import com.example.Run.Redis;
 import com.example.Utils.Maputil;
+import com.example.Utils.Response;
+import com.example.Utils.TimeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,8 +57,6 @@ public class ComptrollerService {
         if (comptroller == null)
             return  false;
 
-
-
         try {
             synchronized (this){
                 Integer integer = this.comptrollerDao.InsertSJ(comptroller);
@@ -76,8 +77,8 @@ public class ComptrollerService {
     }
 
 
-    public List<comptroller> searchEsLike (String filed,String value,int size){
-        SearchHits<comptroller> searchHits = esTemplate.SearchLike(filed, value, size,comptroller.class);
+    public List<comptroller> searchEsLike (String filed,String value,int page,int size){
+        SearchHits<comptroller> searchHits = esTemplate.SearchLike(filed, value, size,page,comptroller.class);
         List<SearchHit<comptroller>> searchHits1 = searchHits.getSearchHits();
         List<comptroller> datas = new ArrayList<>();
         for (SearchHit<comptroller> comptrollerSearchHit : searchHits1) {
@@ -86,32 +87,56 @@ public class ComptrollerService {
         return datas;
     }
 
-    public List<comptroller> searchEsLikeMutile(Map<String,Object> maps, int size){
-        SearchHits<comptroller> searchHits = esTemplate.SearchLikeMutil2(maps, size, comptroller.class);
+    public Response searchEsLikeMutile(Map<String,Object> maps, int size,int page){
+        SearchHits<comptroller> searchHits = esTemplate.SearchLikeMutil2(maps, size,page, comptroller.class);
         return this.Parse(searchHits);
     }
 
-    public List<comptroller> SearchTerm (String filed,String value, String rule, int size) throws ParseException {
+    public Response SearchTerm(String filed, List<String> value, String rule,int size, int page) throws ParseException {
 //        SearchHits<comptroller> searchHits = esTemplate.SearchTerm(filed,value,size,comptroller.class);
 //        return this.Parse(searchHits);
-        List<comptroller> byMessage = null;
-        PageRequest of = PageRequest.of(0, size);
+        List<comptroller> logs = null;
+        int num = value.size();
+        if (num == 1){
+            String key = Maputil.ReplaceAddKeyword(filed);
+            SearchHits<comptroller> searchHits = esTemplate.SearchTerm(key, value.get(0), size, page, comptroller.class);
+            return this.Parse(searchHits);
+        }
 
-        String key = Maputil.ReplaceAddKeyword(filed);
-        SearchHits<comptroller> searchHits = esTemplate.SearchTerm(key, value, size, comptroller.class);
-        byMessage = this.Parse(searchHits);
+        long parselong = 0L;
+        long parselongend = 0L;
+        Response<List<comptroller>> result;
+        if (num == 2) {
+            parselong = TimeUtils.Parselong(value.get(0));
+            parselongend = TimeUtils.Parselong(value.get(1));
+        }
+        PageRequest of = PageRequest.of(size,page);
+        if (filed.equals("recorddate")){
+            if (rule.equals("="))
+                logs = this.comptrollerES.findByRecorddate(parselong,of);
 
-        return byMessage;
+            if (rule.equals(">=") || rule.equals(">"))
+                logs = this.comptrollerES.findByRecorddateAfter(parselong,of);
+
+            if (rule.equals("<=") || rule.equals("<") )
+                logs = this.comptrollerES.findByRecorddateBefore(parselong,of);
+
+            if (parselongend != 0L)
+                logs = this.comptrollerES.findByRecorddateBetween(parselong,parselongend ,of);
+        }
+        result = new Response<>(logs);
+        return result;
     }
 
 
-    private List<comptroller> Parse(SearchHits<comptroller> searchHits){
+    private Response Parse(SearchHits<comptroller> searchHits){
         List<SearchHit<comptroller>> searchHits1 = searchHits.getSearchHits();
+        long totalHits = searchHits.getTotalHits();
         List<comptroller> datas = new ArrayList<>();
         for (SearchHit<comptroller> comptrollerSearchHit : searchHits1) {
             datas.add(comptrollerSearchHit.getContent());
         }
-        return datas;
+        return new Response<>(datas,Math.toIntExact(totalHits));
     }
 
 

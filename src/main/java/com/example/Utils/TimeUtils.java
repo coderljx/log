@@ -21,8 +21,7 @@ public class TimeUtils {
     }
 
     public static long Parselong(String date) throws ParseException {
-        if (Validate(date) == null)
-            throw new ParseException("类型错误",0);
+        if (Validate(date) == null)  throw new ParseException("类型错误",0);
 
         String Time = Validate(date);
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat(Time);
@@ -35,8 +34,7 @@ public class TimeUtils {
     }
 
     public static Date ParseDate(String date) throws ParseException {
-        if (Validate(date) == null)
-            throw new ParseException("类型错误",0);
+        if (Validate(date) == null)   throw new ParseException("类型错误",0);
 
         String Time = Validate(date);
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat(Time);

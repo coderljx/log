@@ -1,5 +1,6 @@
 package com.example.API.SJ;
 
+import com.example.API.Log.LogMessage;
 import com.example.Pojo.comptroller;
 import com.example.Run.Rocket;
 import com.example.Service.ComptrollerService;
@@ -17,6 +18,7 @@ import java.sql.Timestamp;
 import java.text.ParseException;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * 审计服务API
@@ -104,23 +106,32 @@ public class SJAPI {
         if (maps.size() == 0)
             return new Response<>(Coco.ParamsNullError);
 
-        Integer size = 0;
-        String filed = "";
-        String value = "";
-        String rule = "";
+        int size;
+        int page;
+        Map<String, Object> payloads;
+        String filed;
+        String operat = "";
+        List<String> value;
+        String[] opear = new String[]{"=",">","<",">=","<="};
         try {
-            Map<String,String> payload;
-            size = (Integer) maps.get("size");
-            if (maps.get("payload") instanceof Map) {
-                payload = (Map<String,String>) maps.get("payload");
-                filed = payload.get("filed");
-                value = payload.get("value");
-                rule = payload.get("rule");
-            }else {
-                throw new RuntimeException("error");
-            }
-        }catch (Exception e) {
-            return new Response<>(Coco.ParamsNumError);
+            size = maps.get("size") == null ?
+                    20 : (Integer) maps.get("size");
+            page = maps.get("page") == null ?
+                    1 : (Integer) maps.get("size");
+            if (!(maps.get("payload") instanceof Map)) return new Response<>(Coco.ParamsTypeError);
+
+            payloads = (Map<String, Object>) maps.get("payload");
+            filed = (String) payloads.get("filed");
+            boolean Valifiled = Maputil.MapExistsBean(filed, LogMessage.class);
+            if (!Valifiled) return new Response<>(Coco.ParamsTypeError);
+
+            if (!(payloads.get("rule") instanceof Map)) return new Response<>(Coco.ParamsTypeError);
+
+            Map<String,Object> rule = (Map<String, Object>) payloads.get("rule");
+            operat = Objects.equals(rule.get("operat"), "") ? "=" : (String) rule.get("operat");
+            value = (List<String>) rule.get("value");
+        } catch (ClassCastException e) {
+            return new Response<>(Coco.ParamsTypeError);
         }
 
         if (size <= 0) size = 20;
@@ -128,9 +139,7 @@ public class SJAPI {
         if (!b)  return new Response<>(Coco.ParamsError);
 
         try {
-
-            List<comptroller> comptrollers = this.comptrollerService.SearchTerm(filed,value,rule , size);
-            return new Response<>(comptrollers);
+            return this.comptrollerService.SearchTerm(filed,value,operat, size,page);
         } catch (ParseException e) {
             e.printStackTrace();
             return new Response<>(Coco.ParamsTypeError);
@@ -143,7 +152,7 @@ public class SJAPI {
                               @RequestParam("to") Integer to){
         try {
             List<comptroller> findall = this.comptrollerService.findall(from,to);
-            return new Response<>(findall);
+            return new Response<>(findall, findall.size());
         }catch (Exception e){
             e.printStackTrace();
             return new Response<>(Coco.ServerError);
@@ -158,10 +167,12 @@ public class SJAPI {
     public Response searchEsLike(@RequestBody Map<String,Object> maps){
         Integer size = 0;
         String filed = "";
+        Integer page = 0;
         String value = "";
         try {
             Map<String,String> payload;
             size = (Integer) maps.get("size");
+            page = (Integer) maps.get("page");
             if (maps.get("payload") instanceof Map) {
                 payload = (Map<String,String>) maps.get("payload");
                 filed = payload.get("filed");
@@ -180,8 +191,8 @@ public class SJAPI {
         if (size <= 0) size = 20;
 
         try {
-            List<comptroller> comptrollers = this.comptrollerService.searchEsLike(filed, value, size);
-            return new Response<>(comptrollers);
+            List<comptroller> comptrollers = this.comptrollerService.searchEsLike(filed, value, size,page);
+            return new Response<>(comptrollers,comptrollers.size());
         }catch (Exception e) {
             return new Response<>(Coco.ParamsError);
         }
@@ -195,10 +206,12 @@ public class SJAPI {
     @PostMapping("/search/likemutil")
     public Response searchEsotoMutil(@RequestBody Map<String,Object> maps){
         Integer size = 0;
+        Integer page = 0;
         Map<String, Object> stringObjectMap;
         try {
             Map<String,Object> payload;
             size = (Integer) maps.get("size");
+            page = (Integer) maps.get("page");
             if (maps.get("payload") instanceof Map) {
                 payload = (Map<String,Object>) maps.get("payload");
                 mylog.info(String.valueOf("payload=" + payload == null));
@@ -213,9 +226,7 @@ public class SJAPI {
         }
 
         if (stringObjectMap.size() != 0){
-            List<comptroller> datas =
-                    this.comptrollerService.searchEsLikeMutile(stringObjectMap , size);
-            return new Response<>(datas);
+            return this.comptrollerService.searchEsLikeMutile(stringObjectMap,size,page);
         }else {
             return new Response<>(Coco.ParamsError);
         }

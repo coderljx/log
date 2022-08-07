@@ -32,15 +32,15 @@ public class Log2Application {
         return pool.getResource();
     }
     
-    @Bean
-    public RestHighLevelClient restHighLevelClient(){
-        RestHighLevelClient client = new RestHighLevelClient(
-                RestClient.builder(
-                        new HttpHost("10.0.0.183",9200)
-                )
-        );
-        return client;
-    }
+//    @Bean
+//    public RestHighLevelClient restHighLevelClient(){
+//        RestHighLevelClient client = new RestHighLevelClient(
+//                RestClient.builder(
+//                        new HttpHost("10.0.0.183",9200)
+//                )
+//        );
+//        return client;
+//    }
 
     public static void main(String[] args) {
         SpringApplication.run(Log2Application.class, args);

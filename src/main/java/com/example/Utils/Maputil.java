@@ -193,7 +193,7 @@ public class Maputil {
         return result;
     }
     /**
-     * 验证map集合与类中字段是否类型，名称一致
+     * 验证map集合与类中字段是否类型，个数，名称一致
      * @param maps 需要验证的map集合
      * @param type Bean对象
      */
@@ -365,7 +365,6 @@ public class Maputil {
         BeanUtils.copyProperties(Bean1,Bean2);
         return true;
     }
-
 
 
 }
