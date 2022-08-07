@@ -151,8 +151,7 @@ public class SJAPI {
     public Response SelectAll(@RequestParam("from") Integer from,
                               @RequestParam("to") Integer to){
         try {
-            List<comptroller> findall = this.comptrollerService.findall(from,to);
-            return new Response<>(findall, findall.size());
+            return  this.comptrollerService.findall(from,to);
         }catch (Exception e){
             e.printStackTrace();
             return new Response<>(Coco.ServerError);
@@ -191,8 +190,7 @@ public class SJAPI {
         if (size <= 0) size = 20;
 
         try {
-            List<comptroller> comptrollers = this.comptrollerService.searchEsLike(filed, value, size,page);
-            return new Response<>(comptrollers,comptrollers.size());
+            return  this.comptrollerService.searchEsLike(filed, value, size,page);
         }catch (Exception e) {
             return new Response<>(Coco.ParamsError);
         }

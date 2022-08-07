@@ -112,9 +112,7 @@ public class LogAPI {
     public Response SelectAll(@RequestParam("from") Integer from,
                               @RequestParam("to") Integer to){
         try {
-            List<Log> findall =
-                    this.logDevelopDaoService.findall(PageRequest.of(from, to));
-            return new Response<>(findall,findall.size());
+            return this.logDevelopDaoService.findall(PageRequest.of(from, to));
         }catch (Exception e){
             e.printStackTrace();
             return new Response<>(Coco.ServerError);
@@ -207,8 +205,7 @@ public class LogAPI {
 
         if (Arrays.asList(opear).contains(operat)){
             try {
-                List<Log> searchlike = this.logDevelopDaoService.Searchlike(filed, operat, size , page, String.valueOf(value));
-                return new Response<>(searchlike, searchlike.size());
+                return  this.logDevelopDaoService.Searchlike(filed, operat, size , page, String.valueOf(value));
             }catch (Exception e){
                 return new Response<>(Coco.ServerError);
             }

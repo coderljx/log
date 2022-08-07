@@ -96,11 +96,11 @@ public class EsTemplate {
      * @param size 查询的条数
      * @param cls 查询那个index
      */
-    public <T> SearchHits<T> SearchAll(int size , Class<T> cls){
+    public <T> SearchHits<T> SearchAll(PageRequest request,Class<T> cls){
         MatchAllQuery build1 = new MatchAllQuery.Builder().build();
         NativeSearchQuery build = new NativeSearchQueryBuilder()
                 .withQuery((QueryBuilder) build1)
-                .withPageable(Pageable.ofSize(size))
+                .withPageable(request)
                 .build();
         return elasticsearchRestTemplate.search(build,cls);
     }

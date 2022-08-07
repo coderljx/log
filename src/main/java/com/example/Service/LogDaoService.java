@@ -71,8 +71,9 @@ public class LogDaoService {
         }
     }
 
-    public List<Log> findall(PageRequest request){
-        return logES.findAllBy(request);
+    public Response<List<Log>>findall(PageRequest request){
+        SearchHits<Log> searchHits = this.esTemplate.SearchAll(request, Log.class);
+        return this.Parse(searchHits);
     }
 
     public Response<List<Log>> SearchTrem(String filed,  String rule , int size,int page,List<String> value) throws ParseException {
@@ -113,20 +114,15 @@ public class LogDaoService {
         return new Response<>(logs);
     }
 
-    public List<Log> Searchlike(String filed, String rule, int size,int page,String... value) throws ParseException {
+    public Response<List<Log>> Searchlike(String filed, String rule, int size,int page,String... value) throws ParseException {
         String values = "";
         int num = value.length;
         if (value.length == 1) {
             values = value[0];
+            SearchHits searchHits = this.esTemplate.SearchLike(filed, values, size,page, Log.class);
+            return this.Parse(searchHits);
         }
-        SearchHits searchHits = this.esTemplate.SearchLike(filed, values, size,page, Log.class);
-        List<SearchHit<Log>> searchHits1 = searchHits.getSearchHits();
-        List<Log> datas = new ArrayList<>();
-        for (int i = 0; i < searchHits1.size(); i++) {
-            SearchHit<Log> comptrollerSearchHit = searchHits1.get(i);
-            datas.add(comptrollerSearchHit.getContent());
-        }
-
+ 
         long parselong = 0L;
         long parselongend = 0L;
         if (num == 2) {
@@ -134,6 +130,7 @@ public class LogDaoService {
             parselongend = TimeUtils.Parselong(value[1]);
         }
         PageRequest of = PageRequest.of(size,page);
+        List<Log> datas = null;
         if (filed.equals("recorddate")){
             if (rule.equals("="))
                 datas = this.logES.findByRecorddate(parselong,of);
@@ -147,9 +144,7 @@ public class LogDaoService {
             if (parselongend != 0L)
                 datas = this.logES.findByRecorddateBetween(parselong,parselongend ,of);
         }
-
-
-        return datas;
+        return new Response<>(datas);
     }
 
     public Response<List<Log>> SearchlikeMutil(Map<String,Object> maps, int size,int page){

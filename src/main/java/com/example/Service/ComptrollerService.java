@@ -71,20 +71,17 @@ public class ComptrollerService {
         }
     }
 
-    public List<comptroller> findall(int from,int to){
-//        new Sort().setSort(new SortField("createdate", SortField.Type.DOC));
-        return comptrollerES.findAllBy(PageRequest.of(from, to));
+    public Response findall(int from,int to){
+        PageRequest request = PageRequest.of(from, to);
+        SearchHits<comptroller> searchHits = this.esTemplate.SearchAll(request, comptroller.class);
+        return  this.Parse(searchHits);
     }
 
 
-    public List<comptroller> searchEsLike (String filed,String value,int page,int size){
+    public Response<List<comptroller>> searchEsLike (String filed,String value,int page,int size){
         SearchHits<comptroller> searchHits = esTemplate.SearchLike(filed, value, size,page,comptroller.class);
-        List<SearchHit<comptroller>> searchHits1 = searchHits.getSearchHits();
-        List<comptroller> datas = new ArrayList<>();
-        for (SearchHit<comptroller> comptrollerSearchHit : searchHits1) {
-            datas.add(comptrollerSearchHit.getContent());
-        }
-        return datas;
+        Response parse = this.Parse(searchHits);
+        return parse;
     }
 
     public Response searchEsLikeMutile(Map<String,Object> maps, int size,int page){
