@@ -23,7 +23,7 @@ import java.util.*;
 @RestController
 @RequestMapping ("/log")
 public class LogAPI {
-
+    private final Logger mylog = LoggerFactory.getLogger(LogAPI.class);
     private final Rocket rocket;
     private final LogDaoService logDevelopDaoService;
     private final String Topic = "log";
