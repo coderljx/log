@@ -1,7 +1,6 @@
 package com.example.Service;
 
 import com.example.Dao.comptrollerDao;
-import com.example.Pojo.Log;
 import com.example.Pojo.comptroller;
 import com.example.Run.EsTemplate;
 import com.example.Run.Redis;
@@ -78,9 +77,24 @@ public class ComptrollerService {
     }
 
 
-    public Response<List<comptroller>> searchEsLike (String filed,String value,int page,int size){
-        SearchHits<comptroller> searchHits = esTemplate.SearchLike(filed, value, size,page,comptroller.class);
-        Response parse = this.Parse(searchHits);
+    public Response<List<comptroller>> searchEsLike (String filed,List<String> value,String rule,int page,int size) throws ParseException {
+        if (!filed.equals("recorddate")){
+            SearchHits<comptroller> searchHits = esTemplate.SearchLike(filed, value.get(0), size,page,comptroller.class);
+            Response<List<comptroller>> parse = this.Parse(searchHits);
+            return parse;
+        }
+
+        long start = 0L;
+        long end = 0L;
+        if (value.size() == 1) {
+            start = TimeUtils.Parselong(value.get(0));
+        }
+        if (value.size() > 1){
+           start = TimeUtils.Parselong(value.get(0));
+           end = TimeUtils.Parselong(value.get(1));
+        }
+        SearchHits<comptroller> searchHits = esTemplate.SearchRange(filed, start, end, rule, size, page, comptroller.class);
+        Response<List<comptroller>> parse = this.Parse(searchHits);
         return parse;
     }
 
@@ -90,8 +104,6 @@ public class ComptrollerService {
     }
 
     public Response SearchTerm(String filed, List<String> value, String rule,int size, int page) throws ParseException {
-//        SearchHits<comptroller> searchHits = esTemplate.SearchTerm(filed,value,size,comptroller.class);
-//        return this.Parse(searchHits);
         List<comptroller> logs = null;
         int num = value.size();
         if (num == 1){

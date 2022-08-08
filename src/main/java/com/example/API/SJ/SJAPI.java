@@ -117,7 +117,7 @@ public class SJAPI {
             size = maps.get("size") == null ?
                     20 : (Integer) maps.get("size");
             page = maps.get("page") == null ?
-                    1 : (Integer) maps.get("size");
+                    1 : (Integer) maps.get("page");
             if (!(maps.get("payload") instanceof Map)) return new Response<>(Coco.ParamsTypeError);
 
             payloads = (Map<String, Object>) maps.get("payload");
@@ -164,24 +164,32 @@ public class SJAPI {
      */
     @PostMapping("/search/like")
     public Response searchEsLike(@RequestBody Map<String,Object> maps){
-        Integer size = 0;
-        String filed = "";
-        Integer page = 0;
-        String value = "";
+        int size;
+        int page;
+        Map<String, Object> payloads;
+        String filed;
+        String operat = "";
+        List<String> value;
+        String[] opear = new String[]{"=",">","<",">=","<="};
         try {
-            Map<String,String> payload;
-            size = (Integer) maps.get("size");
-            page = (Integer) maps.get("page");
-            if (maps.get("payload") instanceof Map) {
-                payload = (Map<String,String>) maps.get("payload");
-                filed = payload.get("filed");
-                value = payload.get("value");
-            }else {
-                throw new RuntimeException("error");
-            }
-        }catch (Exception e) {
-            e.printStackTrace();
-            return new Response<>(Coco.ParamsNumError);
+            size = maps.get("size") == null ?
+                    20 : (Integer) maps.get("size");
+            page = maps.get("page") == null ?
+                    1 : (Integer) maps.get("page");
+            if (!(maps.get("payload") instanceof Map)) return new Response<>(Coco.ParamsTypeError);
+
+            payloads = (Map<String, Object>) maps.get("payload");
+            filed = (String) payloads.get("filed");
+            boolean Valifiled = Maputil.MapExistsBean(filed, comptroller.class);
+            if (!Valifiled) return new Response<>(Coco.ParamsTypeError);
+
+            if (!(payloads.get("rule") instanceof Map)) return new Response<>(Coco.ParamsTypeError);
+
+            Map<String,Object> rule = (Map<String, Object>) payloads.get("rule");
+            operat = Objects.equals(rule.get("operat"), "") ? "=" : (String) rule.get("operat");
+            value = (List<String>) rule.get("value");
+        } catch (ClassCastException e) {
+            return new Response<>(Coco.ParamsTypeError);
         }
 
         boolean b = Maputil.MapExistsBean(filed, SjMessage.class);
@@ -190,7 +198,7 @@ public class SJAPI {
         if (size <= 0) size = 20;
 
         try {
-            return  this.comptrollerService.searchEsLike(filed, value, size,page);
+            return  this.comptrollerService.searchEsLike(filed, value, operat, size,page);
         }catch (Exception e) {
             return new Response<>(Coco.ParamsError);
         }

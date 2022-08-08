@@ -1,19 +1,16 @@
 package com.example.log2;
 
-import org.springframework.data.repository.cdi.Eager;
-
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-
 public class t {
 
     public static void main(String[] args)  throws Exception{
         try {
-            String[] opear = new String[]{"=",">","<",">=","<="};
-            boolean contains = Arrays.asList(opear).contains("=");
-            System.out.println(contains);
-
+            String a = "2022-08-07 00:00:00#2022-08-08 23:59:59";
+            String substring = a.substring(0, a.indexOf("#"));
+            String[] split = a.split("#");
+            System.out.println(substring);
+            for (String s : split) {
+                System.out.println(s);
+            }
 
         }catch (Exception e){
             e.printStackTrace();

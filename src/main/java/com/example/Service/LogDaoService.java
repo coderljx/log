@@ -4,18 +4,17 @@ package com.example.Service;
 import com.example.Dao.LogDao;
 import com.example.ES.LogES;
 import com.example.Pojo.Log;
-import com.example.Pojo.comptroller;
 import com.example.Run.Email;
 import com.example.Run.EmailProperties;
 import com.example.Run.EsTemplate;
 import com.example.Run.Redis;
 import com.example.Utils.Maputil;
 import com.example.Utils.Response;
+import com.example.Utils.SearchArgs;
 import com.example.Utils.TimeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
@@ -84,7 +83,8 @@ public class LogDaoService {
         {
             if (num == 1){
                 String Newfiled = Maputil.ReplaceAddKeyword(filed);
-                return this.Parse(this.esTemplate.SearchTerm(Newfiled,value.get(0),size,page, Log.class));
+                String values = value.get(0);
+                return this.Parse(this.esTemplate.SearchTerm(Newfiled, values, size, page, Log.class));
             }
         }
 
@@ -99,26 +99,17 @@ public class LogDaoService {
         }
         PageRequest of = PageRequest.of(0, size);
         List<Log> logs = new ArrayList<>();
-        if (rule.equals("="))
-            logs = this.logES.findByRecorddate(parselong,of);
 
-        if (rule.equals(">=") || rule.equals(">"))
-            logs = this.logES.findByRecorddateAfter(parselong,of);
-
-        if (rule.equals("<=") || rule.equals("<") )
-            logs = this.logES.findByRecorddateBefore(parselong,of);
-
-        if (parselongend != 0L)
-            logs = this.logES.findByRecorddateBetween(parselong,parselongend ,of);
-
-        return new Response<>(logs);
+        SearchHits<Log> searchHits = this.esTemplate.SearchRange(filed, parselong, parselongend, rule, size, page, Log.class);
+        Response<List<Log>> parse = this.Parse(searchHits);
+        return parse;
     }
 
-    public Response<List<Log>> Searchlike(String filed, String rule, int size,int page,String... value) throws ParseException {
+    public Response<List<Log>> Searchlike(String filed, String rule, int size,int page,List<String> value) throws ParseException {
         String values = "";
-        int num = value.length;
-        if (value.length == 1) {
-            values = value[0];
+        int num = value.size();
+        if (num == 1) {
+            values = value.get(0);
             SearchHits searchHits = this.esTemplate.SearchLike(filed, values, size,page, Log.class);
             return this.Parse(searchHits);
         }
@@ -126,25 +117,15 @@ public class LogDaoService {
         long parselong = 0L;
         long parselongend = 0L;
         if (num == 2) {
-            parselong = TimeUtils.Parselong(value[0]);
-            parselongend = TimeUtils.Parselong(value[1]);
+            parselong = TimeUtils.Parselong(value.get(0));
+            parselongend = TimeUtils.Parselong(value.get(1));
         }
-        PageRequest of = PageRequest.of(size,page);
-        List<Log> datas = null;
-        if (filed.equals("recorddate")){
-            if (rule.equals("="))
-                datas = this.logES.findByRecorddate(parselong,of);
-
-            if (rule.equals(">=") || rule.equals(">"))
-                datas = this.logES.findByRecorddateAfter(parselong,of);
-
-            if (rule.equals("<=") || rule.equals("<") )
-                datas = this.logES.findByRecorddateBefore(parselong,of);
-
-            if (parselongend != 0L)
-                datas = this.logES.findByRecorddateBetween(parselong,parselongend ,of);
+        if (filed.equals("recorddate")) {
+            SearchHits<Log> searchHits = this.esTemplate.SearchRange(filed, parselong, parselongend, rule, size, page, Log.class);
+            Response<List<Log>> parse = this.Parse(searchHits);
+            return parse;
         }
-        return new Response<>(datas);
+        return new Response<>(null);
     }
 
     public Response<List<Log>> SearchlikeMutil(Map<String,Object> maps, int size,int page){
@@ -171,6 +152,14 @@ public class LogDaoService {
     }
 
 
+
+    public Response<List<Log>> SearchMutilLog(SearchArgs.ArgsItem argsItem,SearchArgs.Order order,int per_page,int curr_page) throws ParseException {
+        if (argsItem == null) return null;
+
+        SearchHits<Log> searchHits = this.esTemplate.SearchLikeMutil3(argsItem, order, per_page, curr_page, Log.class);
+        Response<List<Log>> parse = this.Parse(searchHits);
+        return parse;
+    }
 
     private Response<List<Log>> Parse(SearchHits<Log> searchHits){
         List<SearchHit<Log>> searchHits1 = searchHits.getSearchHits();

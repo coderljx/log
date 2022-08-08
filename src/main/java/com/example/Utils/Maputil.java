@@ -127,6 +127,20 @@ public class Maputil {
     }
 
     /**
+     * 获取bean中的所有字段，以数组格式返回
+     */
+    public static <T,V> String[] BeanKeys(Class<V> type){
+        Field[] fields = GetField(type);
+        String [] names = new String[fields.length];
+        int i = 0;
+        for (Field field : fields) {
+             names[i] = field.getName();
+             i++;
+        }
+        return names;
+    }
+
+    /**
      * 1.将前端传入的json过滤，只有字段与Bean中的字段匹配才会记录
      * return 返回一个过滤完成后的map集合，该map会作为查询条件
      */

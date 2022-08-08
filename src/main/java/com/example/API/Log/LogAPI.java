@@ -1,13 +1,9 @@
 package com.example.API.Log;
 
 
-import com.example.Pojo.Log;
 import com.example.Run.Rocket;
 import com.example.Service.LogDaoService;
-import com.example.Utils.Coco;
-import com.example.Utils.Maputil;
-import com.example.Utils.Response;
-import com.example.Utils.TimeUtils;
+import com.example.Utils.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,10 +11,12 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import java.sql.Array;
 import java.sql.Timestamp;
 import java.text.ParseException;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 @RestController
 @RequestMapping ("/log")
@@ -36,21 +34,55 @@ public class LogAPI {
     }
 
     /**
-     * {
-     *             "payload" : {
-     *                    "appid" : "",     系统id
-     *                     "orgid" : "",    行政组织id
-     *                     "level" : "",    日志级别 ： trace, debug, info, warn, error, fatal
-     *                     "class" : "",    类名
-     *                     "line" : "",     代码行数
-     *                     "method" : "",   方法名称
-     *                     "params" : "",   参数
-     *                     "messsage" : "", 具体信息
-     *                     "user" : "",     操作人
-     *                     "date" : "",     操作时间
-     *                     "createby" : ""  创建人
-     *         }
-     *         }
+     {
+     "args": {
+
+     "filters": {
+     "rules": [
+
+     {
+     "type": "and",
+     "children": [{
+     "type": "and",
+     "children": [{
+     "field": "illegalLevel",
+     "operator": "in",
+     "values": ["一般"]
+     },
+     {
+     "field": "createDate",
+     "operator": "range",
+     "value": "2022-08-07 00:00:00#2022-08-08 23:59:59"
+     },
+     {
+     "field": "platformName",
+     "operator": "in",
+     "value": ["淘宝"],
+     "values": ["淘宝"]
+     }]
+
+     }]
+
+
+     }
+
+     ]
+     },
+
+
+
+
+
+
+     "order": [{
+     "field": "claimedDate",
+     "order_type": "DESC"
+     }],
+     "search": "",
+     "per_page": 20,
+     "curr_page": 1
+     }
+     }
      * 生产消息
      */
     @PostMapping ("/create")
@@ -119,6 +151,11 @@ public class LogAPI {
         }
     }
 
+    /**
+     * 模糊/精确查询
+     * @param maps
+     * @return
+     */
     @PostMapping ("/search/term")
     public Response SelectesTrem(@RequestBody Map<String, Object> maps) {
 
@@ -133,7 +170,7 @@ public class LogAPI {
             size = maps.get("size") == null ?
                     20 : (Integer) maps.get("size");
             page = maps.get("page") == null ?
-                    1 : (Integer) maps.get("size");
+                    1 : (Integer) maps.get("page");
             if (!(maps.get("payload") instanceof Map)) return new Response<>(Coco.ParamsTypeError);
 
             payloads = (Map<String, Object>) maps.get("payload");
@@ -150,19 +187,25 @@ public class LogAPI {
             return new Response<>(Coco.ParamsTypeError);
         }
 
-        if (Arrays.asList(opear).contains(operat)){
-            try {
-                boolean b = Maputil.MapExistsBean(filed,LogMessage.class);
-                if (b) {
-                    return this.logDevelopDaoService.SearchTrem(filed,operat,size,page, value);
-                }
-                throw new RuntimeException();
-            }catch (Exception e){
-                return new Response<>(Coco.ServerError);
-            }
-        } else {
-            return new Response<>(Coco.ParamsNumError);
+
+        try {
+            boolean b = Maputil.MapExistsBean(filed, LogMessage.class);
+            if (!b) return new Response<>(Coco.ParamsNumError);
+
+            if (operat.equals("=")) // 精确查询
+                return this.logDevelopDaoService.SearchTrem(filed, operat, size, page, value);
+
+            if (operat.equals("in")) // 模糊查询
+                return this.logDevelopDaoService.Searchlike(filed, operat, size, page, value);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new Response<>(Coco.ServerError);
         }
+
+
+        return new Response<>(Coco.ParamsNumError);
+
     }
 
     /**
@@ -171,7 +214,7 @@ public class LogAPI {
      * @return
      */
     @SuppressWarnings ("unchecked")
-    @PostMapping ("/search/like")
+//    @PostMapping ("/search/like")
     public Response Selectes(@RequestBody Map<String, Object> maps) {
 
         int size;
@@ -185,7 +228,7 @@ public class LogAPI {
             size = maps.get("size") == null ?
                     20 : (Integer) maps.get("size");
             page = maps.get("page") == null ?
-                    1 : (Integer) maps.get("size");
+                    1 : (Integer) maps.get("page");
             if (!(maps.get("payload") instanceof Map)) return new Response<>(Coco.ParamsTypeError);
 
             payloads = (Map<String, Object>) maps.get("payload");
@@ -199,14 +242,16 @@ public class LogAPI {
             operat = Objects.equals(rule.get("operat"), "") ? "=" : (String) rule.get("operat");
             value = (List<String>) rule.get("value");
         } catch (ClassCastException e) {
+            e.printStackTrace();
             return new Response<>(Coco.ParamsTypeError);
         }
 
 
         if (Arrays.asList(opear).contains(operat)){
             try {
-                return  this.logDevelopDaoService.Searchlike(filed, operat, size , page, String.valueOf(value));
+                return  this.logDevelopDaoService.Searchlike(filed, operat, size , page, value);
             }catch (Exception e){
+                e.printStackTrace();
                 return new Response<>(Coco.ServerError);
             }
         }
@@ -214,33 +259,27 @@ public class LogAPI {
     }
 
 
+    /**
+     * 多条件查询
+     */
     @PostMapping ("/search/likemutil")
-    public Response Selectesl(@RequestBody Map<String, Object> maps) {
-        Integer size = 0;
-        Integer page = 0;
-        Map<String, Object> stringObjectMap;
+    public Response Selectesl(@RequestBody Map<String,Object> maps) {
         try {
-            Map<String,Object> payload;
-            size = (Integer) maps.get("size");
-            page = (Integer) maps.get("page");
-            if (maps.get("payload") instanceof Map) {
-                payload = (Map<String,Object>) maps.get("payload");
-                LogMessage LogMessage = Maputil.MapToObject(payload, LogMessage.class);
-                stringObjectMap = Maputil.ObjectToMap(LogMessage);
-            }else {
-                throw new RuntimeException("error");
-            }
+            Map<String,Object> maps1 = (Map<String, Object>) maps.get("args");
+            int per_page = (int) maps1.get("per_page");
+            int curr_page = (int) maps1.get("curr_page");
+            Map<String,Object> filters = (Map<String, Object>) maps1.get("filters");
+            Map<String,Object> order = (Map<String, Object>) maps1.get("order");
+            SearchArgsMap searchArgsMap = new SearchArgsMap(filters,order);
+            // 解析查询参数
+            searchArgsMap.MapTpArgsItem();
+            // 解析排序方式
+            searchArgsMap.MapToOrder();
+            SearchArgs.ArgsItem argsItem = searchArgsMap.getArgsItem();
+            SearchArgs.Order order1 = searchArgsMap.getOrder();
+            List<SearchArgs.Condition> children = argsItem.getChildren();
+            return this.logDevelopDaoService.SearchMutilLog(argsItem,order1,per_page,curr_page);
         }catch (Exception e) {
-            e.printStackTrace();
-            return new Response<>(Coco.ParamsError);
-        }
-
-
-        if (stringObjectMap.size() == 0)  return new Response<>(Coco.ParamsNumError);
-
-        try {
-            return this.logDevelopDaoService.SearchlikeMutil(stringObjectMap,size,page);
-        }catch (Exception e){
             e.printStackTrace();
             return new Response<>(Coco.ParamsError);
         }
