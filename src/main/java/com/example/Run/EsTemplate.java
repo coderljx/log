@@ -117,6 +117,9 @@ public class EsTemplate {
         for (SearchArgs.Condition child : children) {
             String filed = child.getField();
             String operator = child.getOperator();
+            if (operator.equals("=")){
+                filed = Maputil.ReplaceAddKeyword(filed);
+            }
             String value = "";
             List<String> values;
             if (child.getValue() != null) value = child.getValue();
