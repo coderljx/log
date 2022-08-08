@@ -35,8 +35,8 @@ public class SearchArgsMap {
      * @return
      * @throws Exception
      */
-    public void MapTpArgsItem() throws Exception{
-        if (this.filters == null) return;
+    public boolean MapTpArgsItem() throws Exception{
+        if (this.filters == null) return false;
 
         Map<String, Object> filters = this.getFilters();
         if (filters.get("rules") != null) {
@@ -51,29 +51,38 @@ public class SearchArgsMap {
                     if (children.get(c).get("children") != null && children.get(c).get("type") != null) {
                         List<Map<String,Object>> children3 = (List<Map<String, Object>>)children.get(c).get("children");
                         argsItem.setChildren(this.GetConditionFormMaps(children3));
+                        return true;
                     }else {
-
+                        argsItem.setChildren(this.GetConditionFormMaps(children));
+                        return true;
                     }
 
                 }
             }
         }
-
+        return false;
     }
 
 
-    public void MapToOrder(){
-        if (this.order == null) return;
+    /**
+     * 解析map中的参数，设置order排序
+     */
+    public <T> boolean MapToOrder(Class<T> cls){
+        if (this.order == null) return false;
 
         Map<String, Object> order = this.order1;
-        if (order.get("field") == null || order.get("order_type") == null) return;
+        if (order.get("field") == null || order.get("order_type") == null) return false;
 
         String field = (String) order.get("field");
         String type = (String) order.get("order_type");
         if (!field.equals("") && !type.equals("")){
-            this.order.setField(field);
-            this.order.setOrder_type(type);
+            if (Maputil.MapExistsBean(field, cls)){
+                this.order.setField(field);
+                this.order.setOrder_type(type);
+                return true;
+            }
         }
+        return false;
     }
 
 

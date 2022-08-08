@@ -272,12 +272,12 @@ public class LogAPI {
             Map<String,Object> order = (Map<String, Object>) maps1.get("order");
             SearchArgsMap searchArgsMap = new SearchArgsMap(filters,order);
             // 解析查询参数
-            searchArgsMap.MapTpArgsItem();
+            if (!searchArgsMap.MapTpArgsItem())  throw new RuntimeException();
             // 解析排序方式
-            searchArgsMap.MapToOrder();
+            if (!searchArgsMap.MapToOrder(LogMessage.class)) throw new RuntimeException();
+
             SearchArgs.ArgsItem argsItem = searchArgsMap.getArgsItem();
             SearchArgs.Order order1 = searchArgsMap.getOrder();
-            List<SearchArgs.Condition> children = argsItem.getChildren();
             return this.logDevelopDaoService.SearchMutilLog(argsItem,order1,per_page,curr_page);
         }catch (Exception e) {
             e.printStackTrace();

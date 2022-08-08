@@ -113,7 +113,7 @@ public class EsTemplate {
         BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
         String type = argsItem.getType();
         List<SearchArgs.Condition> children = argsItem.getChildren();
-        RangeQueryBuilder rangeQueryBuilder = null;
+        RangeQueryBuilder rangeQueryBuilder;
         for (SearchArgs.Condition child : children) {
             String filed = child.getField();
             String operator = child.getOperator();

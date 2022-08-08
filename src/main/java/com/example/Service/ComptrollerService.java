@@ -1,11 +1,13 @@
 package com.example.Service;
 
 import com.example.Dao.comptrollerDao;
+import com.example.Pojo.Log;
 import com.example.Pojo.comptroller;
 import com.example.Run.EsTemplate;
 import com.example.Run.Redis;
 import com.example.Utils.Maputil;
 import com.example.Utils.Response;
+import com.example.Utils.SearchArgs;
 import com.example.Utils.TimeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,6 +78,13 @@ public class ComptrollerService {
         return  this.Parse(searchHits);
     }
 
+    public Response<List<comptroller>> SearchMutilLog(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int per_page, int curr_page) throws ParseException {
+        if (argsItem == null) return null;
+
+        SearchHits<comptroller> searchHits = this.esTemplate.SearchLikeMutil3(argsItem, order, per_page, curr_page, comptroller.class);
+        Response<List<comptroller>> parse = this.Parse(searchHits);
+        return parse;
+    }
 
     public Response<List<comptroller>> searchEsLike (String filed,List<String> value,String rule,int page,int size) throws ParseException {
         if (!filed.equals("recorddate")){

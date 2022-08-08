@@ -4,10 +4,7 @@ import com.example.API.Log.LogMessage;
 import com.example.Pojo.comptroller;
 import com.example.Run.Rocket;
 import com.example.Service.ComptrollerService;
-import com.example.Utils.Coco;
-import com.example.Utils.Maputil;
-import com.example.Utils.Response;
-import com.example.Utils.TimeUtils;
+import com.example.Utils.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -151,7 +148,7 @@ public class SJAPI {
     public Response SelectAll(@RequestParam("from") Integer from,
                               @RequestParam("to") Integer to){
         try {
-            return  this.comptrollerService.findall(from,to);
+            return this.comptrollerService.findall(from,to);
         }catch (Exception e){
             e.printStackTrace();
             return new Response<>(Coco.ServerError);
@@ -211,31 +208,27 @@ public class SJAPI {
      */
     @PostMapping("/search/likemutil")
     public Response searchEsotoMutil(@RequestBody Map<String,Object> maps){
-        Integer size = 0;
-        Integer page = 0;
-        Map<String, Object> stringObjectMap;
         try {
-            Map<String,Object> payload;
-            size = (Integer) maps.get("size");
-            page = (Integer) maps.get("page");
-            if (maps.get("payload") instanceof Map) {
-                payload = (Map<String,Object>) maps.get("payload");
-                mylog.info(String.valueOf("payload=" + payload == null));
-                SjMessage sjMessage = Maputil.MapToObject(payload, SjMessage.class);
-                stringObjectMap = Maputil.ObjectToMap(sjMessage);
-            }else {
-                throw new RuntimeException("error");
-            }
+            Map<String,Object> maps1 = (Map<String, Object>) maps.get("args");
+            int per_page = (int) maps1.get("per_page");
+            int curr_page = (int) maps1.get("curr_page");
+            Map<String,Object> filters = (Map<String, Object>) maps1.get("filters");
+            Map<String,Object> order = (Map<String, Object>) maps1.get("order");
+            SearchArgsMap searchArgsMap = new SearchArgsMap(filters,order);
+            // 解析查询参数
+            if (!searchArgsMap.MapTpArgsItem())  throw new RuntimeException();
+            // 解析排序方式
+            if (!searchArgsMap.MapToOrder(SjMessage.class)) throw new RuntimeException();
+            SearchArgs.ArgsItem argsItem = searchArgsMap.getArgsItem();
+            SearchArgs.Order order1 = searchArgsMap.getOrder();
+            this.comptrollerService.SearchMutilLog(argsItem,order1,per_page,curr_page);
         }catch (Exception e) {
             e.printStackTrace();
-            return new Response<>(Coco.ParamsNumError);
-        }
-
-        if (stringObjectMap.size() != 0){
-            return this.comptrollerService.searchEsLikeMutile(stringObjectMap,size,page);
-        }else {
             return new Response<>(Coco.ParamsError);
         }
+
+
+        return null;
     }
 
 
