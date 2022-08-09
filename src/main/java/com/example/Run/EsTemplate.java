@@ -15,6 +15,7 @@ import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilde
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
+import java.lang.reflect.Field;
 import java.text.ParseException;
 import java.util.List;
 import java.util.Map;
@@ -168,9 +169,18 @@ public class EsTemplate {
      * @param cls 查询那个index
      */
     public <T> SearchHits<T> SearchAll(PageRequest request,Class<T> cls){
+        Field[] declaredFields = cls.getDeclaredFields();
+        String filed = null;
+        for (Field declaredField : declaredFields) {
+            declaredField.setAccessible(true);
+            if (declaredField.getName().equals("recorddate")){
+                filed = declaredField.getName();
+            }
+        }
         NativeSearchQuery build = new NativeSearchQueryBuilder()
                 .withQuery(new MatchAllQueryBuilder())
                 .withPageable(request)
+                .withSort(Sort.by(Sort.Direction.DESC,filed))
                 .build();
         return elasticsearchRestTemplate.search(build,cls);
     }

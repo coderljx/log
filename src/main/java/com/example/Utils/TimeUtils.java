@@ -51,6 +51,16 @@ public class TimeUtils {
         return new Timestamp(date1.getTime());
     }
 
+    /**
+     * 将date转换成另一中样式显示
+     * @param date
+     */
+    public static String ParseDate(Date date) throws Exception{
+        String time = "yyyy-MM-dd HH:mm:ss";
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat(time);
+        String format = simpleDateFormat.format(date);
+        return format;
+    }
 
 
 

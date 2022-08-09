@@ -4,7 +4,6 @@ import com.example.Consumer.LogConsumer;
 import com.example.Interface.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.BeanUtils;
 
 import javax.servlet.http.HttpServletRequest;
 import java.lang.reflect.Field;
@@ -369,15 +368,37 @@ public class Maputil {
     }
 
     /**
-     * @param Bean1 Source
-     * @param Bean2 Target
+     * 将一个bean的值复制给另一个bean，用户将查询结果映射给返回bean
+     * cls1 : 是被复制的bean
+     * cls2 ：是复制的bean
      */
-    public static <K,V> boolean BeanToBean (K Bean1, V Bean2) {
-        if (Bean1 == null || Bean2 == null)
-            return false;
+    public static <T,V> V BeanToBean(T cls1, V cls2) throws IllegalAccessException {
+        Field[] fields1 = GetField(cls1.getClass());
 
-        BeanUtils.copyProperties(Bean1,Bean2);
-        return true;
+        V newins = null;
+        try {
+            newins = (V) cls2.getClass().newInstance();
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+        }
+        Field[] fields2 = GetField(newins.getClass());
+
+        for (Field field : fields1) {
+            field.setAccessible(true);
+            String FieldName = field.getName();
+            Class<?> type = field.getType();
+            Object o = field.get(cls1);
+            if (o == null) continue;
+
+            for (Field field1 : fields2) {
+                field1.setAccessible(true);
+                String FieldName2 = field1.getName();
+                if (FieldName.equals(FieldName2) && type.isAssignableFrom(field1.getType())){
+                    field1.set(newins,o);
+                }
+            }
+        }
+        return newins;
     }
 
 

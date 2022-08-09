@@ -1,14 +1,12 @@
 package com.example.Service;
 
 import com.example.Dao.comptrollerDao;
-import com.example.Pojo.Log;
+import com.example.Pojo.Model;
 import com.example.Pojo.comptroller;
+import com.example.Pojo.comptrollerReturn;
 import com.example.Run.EsTemplate;
 import com.example.Run.Redis;
-import com.example.Utils.Maputil;
-import com.example.Utils.Response;
-import com.example.Utils.SearchArgs;
-import com.example.Utils.TimeUtils;
+import com.example.Utils.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,8 +15,8 @@ import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.stereotype.Component;
 
-import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -39,13 +37,6 @@ public class ComptrollerService {
         this.comptrollerES = comptrollerES;
         this.redis = redis;
         this.esTemplate = esTemplate;
-    }
-
-    public List<comptroller> tt(String value){
-        PageRequest of = PageRequest.of(0, 10);
-
-        //1658999038000L
-        return comptrollerES.findByRecorddate(1658999038000L,of);
     }
 
 
@@ -72,24 +63,27 @@ public class ComptrollerService {
         }
     }
 
-    public Response findall(int from,int to){
-        PageRequest request = PageRequest.of(from, to);
+    public Response<List<comptrollerReturn>> findall(int size,int page) throws Exception {
+        PageRequest request = PageRequest.of(size, page);
         SearchHits<comptroller> searchHits = this.esTemplate.SearchAll(request, comptroller.class);
         return  this.Parse(searchHits);
     }
 
-    public Response<List<comptroller>> SearchMutilLog(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int per_page, int curr_page) throws ParseException {
-        if (argsItem == null) return null;
+    public Response<List<comptrollerReturn>> SearchMutilLog(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int per_page, int curr_page) throws Exception {
+        if (argsItem.getType() == null && argsItem.getChildren() == null) {
+            Response<List<comptrollerReturn>> findall = this.findall(curr_page, per_page);
+            return findall;
+        }
 
         SearchHits<comptroller> searchHits = this.esTemplate.SearchLikeMutil3(argsItem, order, per_page, curr_page, comptroller.class);
-        Response<List<comptroller>> parse = this.Parse(searchHits);
+        Response<List<comptrollerReturn>> parse = this.Parse(searchHits);
         return parse;
     }
 
-    public Response<List<comptroller>> searchEsLike (String filed,List<String> value,String rule,int page,int size) throws ParseException {
+    public Response<List<comptrollerReturn>> searchEsLike (String filed, List<String> value, String rule, int page, int size) throws Exception {
         if (!filed.equals("recorddate")){
             SearchHits<comptroller> searchHits = esTemplate.SearchLike(filed, value.get(0), size,page,comptroller.class);
-            Response<List<comptroller>> parse = this.Parse(searchHits);
+            Response<List<comptrollerReturn>> parse = this.Parse(searchHits);
             return parse;
         }
 
@@ -103,16 +97,16 @@ public class ComptrollerService {
            end = TimeUtils.Parselong(value.get(1));
         }
         SearchHits<comptroller> searchHits = esTemplate.SearchRange(filed, start, end, rule, size, page, comptroller.class);
-        Response<List<comptroller>> parse = this.Parse(searchHits);
+        Response<List<comptrollerReturn>> parse = this.Parse(searchHits);
         return parse;
     }
 
-    public Response searchEsLikeMutile(Map<String,Object> maps, int size,int page){
+    public Response searchEsLikeMutile(Map<String,Object> maps, int size,int page) throws Exception {
         SearchHits<comptroller> searchHits = esTemplate.SearchLikeMutil2(maps, size,page, comptroller.class);
         return this.Parse(searchHits);
     }
 
-    public Response SearchTerm(String filed, List<String> value, String rule,int size, int page) throws ParseException {
+    public Response SearchTerm(String filed, List<String> value, String rule,int size, int page) throws Exception {
         List<comptroller> logs = null;
         int num = value.size();
         if (num == 1){
@@ -147,15 +141,52 @@ public class ComptrollerService {
     }
 
 
-    private Response Parse(SearchHits<comptroller> searchHits){
+    private Response<List<comptrollerReturn>> Parse(SearchHits<comptroller> searchHits) throws Exception {
         List<SearchHit<comptroller>> searchHits1 = searchHits.getSearchHits();
         long totalHits = searchHits.getTotalHits();
-        List<comptroller> datas = new ArrayList<>();
+        List<comptrollerReturn> datas = new ArrayList<>();
         for (SearchHit<comptroller> comptrollerSearchHit : searchHits1) {
-            datas.add(comptrollerSearchHit.getContent());
+            comptroller content = comptrollerSearchHit.getContent();
+            Date Navicat = content.getRecorddate();
+            comptrollerReturn comptroller = Maputil.BeanToBean(content, new comptrollerReturn());
+            String newdate = TimeUtils.ParseDate(Navicat);
+            comptroller.setRecorddate(newdate);
+            datas.add(comptroller);
         }
-        return new Response<>(datas,Math.toIntExact(totalHits));
+
+        return new Response<>(datas, Math.toIntExact(totalHits));
     }
+
+
+
+
+    public List<Model> GetModel() throws Exception {
+        Model time = ModelReturn.Time();
+        Model model = new Model();
+        model.setField("model");
+        model.setLabel("=");
+        model.setOperator("操作模块");
+        model.setType("checkbox");
+        model.setDatatype("string");
+        model.setCanInput("no");
+        List<String> list = this.comptrollerDao.GetMoudel();
+        List<Model.label> labelList = new ArrayList<>();
+        for (String s : list) {
+            Model.label label = new Model.label();
+            label.setLabel(s);
+            label.setValue(s);
+            labelList.add(label);
+        }
+        model.setOtions(labelList);
+        List<Model> modelList = new ArrayList<>();
+        modelList.add(time);
+        modelList.add(model);
+        return modelList;
+    }
+
+
+
+
 
 
 

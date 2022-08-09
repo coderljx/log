@@ -1,20 +1,28 @@
 package com.example.log2;
 
+import java.io.FileInputStream;
+import java.io.OutputStream;
+import java.net.Socket;
+
 public class t {
 
     public static void main(String[] args)  throws Exception{
-        try {
-            String a = "2022-08-07 00:00:00#2022-08-08 23:59:59";
-            String substring = a.substring(0, a.indexOf("#"));
-            String[] split = a.split("#");
-            System.out.println(substring);
-            for (String s : split) {
-                System.out.println(s);
-            }
+        trans("/Users/brother/Desktop/Log2-0.0.1-SNAPSHOT.jar");
 
-        }catch (Exception e){
-            e.printStackTrace();
+
+    }
+
+
+    public static void trans(String file) throws Exception{
+        Socket socket = new Socket("10.0.0.183",2000);
+        FileInputStream inputStream = new FileInputStream(file);
+        byte[] bytes = new byte[1024];
+        int i = 0;
+        OutputStream outputStream = socket.getOutputStream();
+        while ((i = inputStream.read(bytes)) != -1){
+            outputStream.write(bytes,0,i);
         }
+        socket.shutdownOutput();
     }
 
 

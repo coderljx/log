@@ -1,7 +1,9 @@
 package com.example.API.SJ;
 
 import com.example.API.Log.LogMessage;
+import com.example.Pojo.Model;
 import com.example.Pojo.comptroller;
+import com.example.Pojo.comptrollerReturn;
 import com.example.Run.Rocket;
 import com.example.Service.ComptrollerService;
 import com.example.Utils.*;
@@ -35,20 +37,13 @@ public class SJAPI {
         this.comptrollerService = comptrollerService;
     }
 
-    @PostMapping("/")
-    public Response tt(@RequestBody Map<String,Object> maps) throws Exception{
-        Map<String, Object> payload = (Map<String, Object>) maps.get("payload");
-        if (payload == null)
-            return new Response<>(Coco.ParamsError);
-
-        SjMessage log = null;
-
-            String date = (String) payload.get("recorddate");
-            Timestamp timestamp = TimeUtils.ParseTimestamp(date);
-            payload.put("recorddate",timestamp);
-            Maputil.MapValiType(payload, SjMessage.class);
-        return new Response<>();
+    @GetMapping("/model")
+    public Response model() throws Exception{
+        List<Model> list = this.comptrollerService.GetModel();
+        return new Response<>(list);
     }
+
+
 
     @PostMapping("/config/setting")
     public Response Config(@RequestBody Map<String,Object> maps,
@@ -140,6 +135,9 @@ public class SJAPI {
         } catch (ParseException e) {
             e.printStackTrace();
             return new Response<>(Coco.ParamsTypeError);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new Response<>(Coco.ParamsTypeError);
         }
 
     }
@@ -221,14 +219,12 @@ public class SJAPI {
             if (!searchArgsMap.MapToOrder(SjMessage.class)) throw new RuntimeException();
             SearchArgs.ArgsItem argsItem = searchArgsMap.getArgsItem();
             SearchArgs.Order order1 = searchArgsMap.getOrder();
-            this.comptrollerService.SearchMutilLog(argsItem,order1,per_page,curr_page);
+            Response<List<comptrollerReturn>> listResponse = this.comptrollerService.SearchMutilLog(argsItem, order1, per_page, curr_page);
+            return listResponse;
         }catch (Exception e) {
             e.printStackTrace();
             return new Response<>(Coco.ParamsError);
         }
-
-
-        return null;
     }
 
 

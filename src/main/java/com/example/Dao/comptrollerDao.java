@@ -5,6 +5,8 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
+import java.util.List;
+
 @Mapper
 public interface comptrollerDao {
 
@@ -16,4 +18,6 @@ public interface comptrollerDao {
     @Select("select max(id) from log_audit")
     Integer SelectMaxid();
 
+    @Select("SELECT moudel FROM log_audit GROUP BY moudel")
+    List<String> GetMoudel();
 }

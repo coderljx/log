@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 @RocketMQMessageListener (
         consumerGroup = "logconsumer",
         topic = "log",
-        selectorExpression = "trace || debug || info || warn || error || fatal"
+        selectorExpression = "正常 || 轻微 || 一般 || 严重 || 非常严重"
 )
 public class LogConsumer implements RocketMQListener<MessageExt> {
     private final Logger log = LoggerFactory.getLogger(LogConsumer.class);
@@ -32,23 +32,23 @@ public class LogConsumer implements RocketMQListener<MessageExt> {
         log.debug("消费者从MQ获取成功消息 : " + status);
         try {
             String tag = status.getTags();
-            if (tag.equals("trace")) // 正常
+            if (tag.equals("正常")) // 正常
                 this.trace(status);
 
-            if (tag.equals("debug")) // 轻微
+            if (tag.equals("轻微")) // 轻微
                 this.debug(status);
 
-            if (tag.equals("info")) // 一般
+            if (tag.equals("一般")) // 一般
                 this.info(status);
 
-            if (tag.equals("warn")) //
+            if (tag.equals("严重")) //
                 this.warn(status);
 
-            if (tag.equals("error")) // 严重
+            if (tag.equals(" 非常严重")) // 严重
                 this.error(status);
 
-            if (tag.equals("fatal")) // 非常严重
-                this.fatal(status);
+//            if (tag.equals("fatal")) // 非常严重
+//                this.fatal(status);
         } catch (Exception e) {
             // 异常直接回滚
             e.printStackTrace();
@@ -59,9 +59,6 @@ public class LogConsumer implements RocketMQListener<MessageExt> {
     private void trace(MessageExt status){
         String data = new String(status.getBody());
         Log logOperation = JSONObject.parseObject(data, Log.class);
-        System.out.println("消费者解析出来的数据 : ----------");
-        System.out.println(logOperation.getLevel());
-        System.out.println(logOperation.getLogmessage());
         this.logDevelopDaoService.InsertDB(logOperation);
     }
 

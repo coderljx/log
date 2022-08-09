@@ -1,6 +1,7 @@
 package com.example.API.Log;
 
 
+import com.example.Pojo.Model;
 import com.example.Run.Rocket;
 import com.example.Service.LogDaoService;
 import com.example.Utils.*;
@@ -121,7 +122,8 @@ public class LogAPI {
         if (log == null)
             return new Response<>(Coco.ParamsError);
 
-        String[] tag = new String[]{"trace", "debug", "info", "warn", "error", "fatal"};
+//        String[] tag = new String[]{"trace", "debug", "info", "warn", "error", "fatal"};
+        String[] tag = new String[]{"正常","轻微","一般","严重","非常严重"};
         int i = 0;
         for (String s : tag) {
             if (s.equals(log.getLevel())){
@@ -258,6 +260,17 @@ public class LogAPI {
         return new Response<>(Coco.ParamsError);
     }
 
+
+    @GetMapping("/model")
+    public Response Model(){
+        try {
+            List<Model> moudel = this.logDevelopDaoService.Moudel();
+            return new Response<>(moudel);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new Response<>(Coco.ParamsTypeError);
+        }
+    }
 
     /**
      * 多条件查询

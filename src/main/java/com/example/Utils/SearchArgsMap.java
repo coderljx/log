@@ -41,11 +41,11 @@ public class SearchArgsMap {
         Map<String, Object> filters = this.getFilters();
         if (filters.get("rules") != null) {
             List<Map<String,Object>> rules = (List<Map<String, Object>>) filters.get("rules");
+            if (rules.size() == 0) return true;
 
             for (Map<String, Object> rule : rules) {
                 argsItem.setType((String) rule.get("type"));
                 List<Map<String,Object>> children = (List<Map<String, Object>>) rule.get("children");
-
                 for (int c = 0; c < children.size(); c++) {
                     // children中还有
                     if (children.get(c).get("children") != null && children.get(c).get("type") != null) {
