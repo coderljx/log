@@ -67,6 +67,8 @@ public class comptroller implements Serializable {
 
     private String userid;
 
+    private String username;
+
     private Date recorddate;
 
     @Field (type= FieldType.Ip)

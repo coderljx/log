@@ -7,6 +7,7 @@ public class LogReturn {
 
  private Long id;
  private String appid;
+ private String appname;
  private String orgid;
  private String level;
  private String eventype;

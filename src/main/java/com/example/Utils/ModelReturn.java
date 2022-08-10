@@ -14,38 +14,38 @@ public class ModelReturn {
 
     public static Model Time() throws Exception {
         String CurrentTime = TimeUtils.ParseDate(new Date());
-        String[] times = new String[]{"1", "1", "1", "1", "1", "1", "1"};
+        String[] times = new String[7];
         for (int i = 0; i < times.length; i++) {
             Calendar c = Calendar.getInstance();
             if (i == 0) times[i] = ParseString(CurrentTime, CurrentTime);
 
             if (i == 1) {
-                c.add(Calendar.DAY_OF_MONTH, 1);
+                c.add(Calendar.DAY_OF_MONTH, -1);
                 Date time = c.getTime();
                 times[i] = ParseString(CurrentTime, time);
             }
             if (i == 2) {
-                c.add(Calendar.DAY_OF_MONTH, 2);
+                c.add(Calendar.DAY_OF_MONTH, -2);
                 Date time = c.getTime();
                 times[i] = ParseString(CurrentTime, time);
             }
             if (i == 3) {
-                c.add(Calendar.DAY_OF_WEEK, 7);
+                c.add(Calendar.DAY_OF_WEEK, -7);
                 Date time = c.getTime();
                 times[i] = ParseString(CurrentTime, time);
             }
             if (i == 4) {
-                c.add(Calendar.DAY_OF_WEEK, 14);
+                c.add(Calendar.DAY_OF_WEEK, -14);
                 Date time = c.getTime();
                 times[i] = ParseString(CurrentTime, time);
             }
             if (i == 5) {
-                c.add(Calendar.MONTH, 1);
+                c.add(Calendar.MONTH, -1);
                 Date time = c.getTime();
                 times[i] = ParseString(CurrentTime, time);
             }
             if (i == 6) {
-                c.add(Calendar.MONTH, 3);
+                c.add(Calendar.MONTH, -3);
                 Date time = c.getTime();
                 times[i] = ParseString(CurrentTime, time);
             }
@@ -80,10 +80,8 @@ public class ModelReturn {
      */
     private static String ParseString(String current, String end) {
         String[] s1 = current.split(" ");
-        s1[0] += " 00:00:00";
         String[] s2 = end.split(" ");
-        s2[0] += " 23:59:59";
-        String value = s1[0] + "#" + s2[0];
+        String value = s2[0] + "#" + s1[0];
         return value;
     }
 

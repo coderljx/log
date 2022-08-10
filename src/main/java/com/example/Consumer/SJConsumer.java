@@ -27,14 +27,10 @@ public class SJConsumer implements RocketMQListener<MessageExt> {
 
     @Override
     public void onMessage(MessageExt messageExt) {
-        try {
             String data = new String(messageExt.getBody());
             log.info(data);
             comptroller parsecomptroller = JSONObject.parseObject(data, comptroller.class);
             this.comptrollerService.Insertsj(parsecomptroller);
-        }catch (Exception e){
-            e.printStackTrace();
-        }
 
     }
 

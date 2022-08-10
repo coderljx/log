@@ -15,10 +15,10 @@ import org.springframework.stereotype.Component;
 @RocketMQMessageListener (
         consumerGroup = "logconsumer",
         topic = "log",
-        selectorExpression = "正常 || 轻微 || 一般 || 严重 || 非常严重"
+        selectorExpression = "trace || info || warn || error || fatal"
 )
 public class LogConsumer implements RocketMQListener<MessageExt> {
-    private final Logger log = LoggerFactory.getLogger(LogConsumer.class);
+    private final Logger mylog = LoggerFactory.getLogger(LogConsumer.class);
     private final LogDaoService logDevelopDaoService;
 
 
@@ -29,30 +29,22 @@ public class LogConsumer implements RocketMQListener<MessageExt> {
 
     @Override
     public void onMessage(MessageExt status) {
-        log.debug("消费者从MQ获取成功消息 : " + status);
-        try {
+        mylog.debug("消费者从MQ获取成功消息 : " + status);
             String tag = status.getTags();
-            if (tag.equals("正常")) // 正常
+            if (tag.equals("trace")) // 正常
                 this.trace(status);
 
-            if (tag.equals("轻微")) // 轻微
+            if (tag.equals("info")) // 轻微
                 this.debug(status);
 
-            if (tag.equals("一般")) // 一般
+            if (tag.equals("warn")) // 一般
                 this.info(status);
 
-            if (tag.equals("严重")) //
-                this.warn(status);
-
-            if (tag.equals(" 非常严重")) // 严重
+            if (tag.equals("error")) // 严重
                 this.error(status);
 
-//            if (tag.equals("fatal")) // 非常严重
-//                this.fatal(status);
-        } catch (Exception e) {
-            // 异常直接回滚
-            e.printStackTrace();
-        }
+            if (tag.equals("fatal")) // 非常严重
+                this.fatal(status);
     }
 
 

@@ -29,6 +29,8 @@ public class LogMessage {
     private String orgid;
     private String appid;
     @NotNull
+    private String appname;
+    @NotNull
     private String level;
     @NotNull
     private String eventype;

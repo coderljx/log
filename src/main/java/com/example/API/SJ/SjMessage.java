@@ -48,6 +48,8 @@ public class SjMessage {
    @NotNull
    private String userid;
    @NotNull
+   private String username;
+   @NotNull
    private String moudel;
    @NotNull
    private Date recorddate;

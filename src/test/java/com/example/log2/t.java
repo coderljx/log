@@ -7,7 +7,10 @@ import java.net.Socket;
 public class t {
 
     public static void main(String[] args)  throws Exception{
-        trans("/Users/brother/Desktop/Log2-0.0.1-SNAPSHOT.jar");
+       // trans("/Users/brother/Desktop/Log2-0.0.1-SNAPSHOT.jar");
+
+
+
 
 
     }

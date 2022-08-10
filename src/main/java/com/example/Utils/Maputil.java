@@ -230,7 +230,7 @@ public class Maputil {
                 num ++;
                 break;
             }
-            mylog.info("验证字段 ： " + declaredField.getName() + "   验证结果 : " + equals);
+            //mylog.info("验证字段 ： " + declaredField.getName() + "   验证结果 : " + equals);
         }
         return num == 0;
     }

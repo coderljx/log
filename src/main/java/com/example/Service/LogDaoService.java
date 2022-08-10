@@ -31,7 +31,7 @@ public class LogDaoService {
     private final Redis redis;
     private final Email email;
     private final EmailProperties emailProperties;
-
+    private final String[] values = new String[]{"全部","正常","轻微","一般","严重","非常严重"};
 
     @Autowired(required = false)
     public LogDaoService(LogDao logDevelopDao,
@@ -159,6 +159,13 @@ public class LogDaoService {
             return findall;
         }
 
+        List<SearchArgs.Condition> children = argsItem.getChildren();
+        for (SearchArgs.Condition child : children) {
+             if (child.getField().equals("level") && child.getValue().equals("")){
+                  String values1 = "正常," + "轻微," + "一般," + "严重," + "非常严重";
+                  child.setValue(values1);
+             }
+        }
         SearchHits<Log> searchHits = this.esTemplate.SearchLikeMutil3(argsItem, order, per_page, curr_page, Log.class);
         Response<List<LogReturn>> parse = this.Parse(searchHits);
         return parse;
@@ -196,17 +203,21 @@ public class LogDaoService {
     private Model Level(){
         Model model = new Model();
         model.setField("level");
-        model.setLabel("=");
+        model.setLabel("eq");
         model.setOperator("严重等级");
         model.setType("checkbox");
         model.setDatatype("string");
         model.setCanInput("no");
         List<Model.label> labelList = new ArrayList<>();
-        String[] values = new String[]{"正常","轻微","一般","严重","非常严重"};
-        for (String value : values) {
+        for (String value : this.values) {
             Model.label label = new Model.label();
-            label.setLabel(value);
-            label.setValue(value);
+            if (value.equals("全部")){
+                label.setLabel(value);
+                label.setValue("");
+            }else {
+                label.setLabel(value);
+                label.setValue(value);
+            }
             labelList.add(label);
         }
         model.setOtions(labelList);

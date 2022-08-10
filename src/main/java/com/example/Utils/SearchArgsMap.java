@@ -43,21 +43,28 @@ public class SearchArgsMap {
             List<Map<String,Object>> rules = (List<Map<String, Object>>) filters.get("rules");
             if (rules.size() == 0) return true;
 
+            List<Map<String,Object>> solr = new ArrayList<>();
             for (Map<String, Object> rule : rules) {
-                argsItem.setType((String) rule.get("type"));
-                List<Map<String,Object>> children = (List<Map<String, Object>>) rule.get("children");
-                for (int c = 0; c < children.size(); c++) {
-                    // children中还有
-                    if (children.get(c).get("children") != null && children.get(c).get("type") != null) {
-                        List<Map<String,Object>> children3 = (List<Map<String, Object>>)children.get(c).get("children");
-                        argsItem.setChildren(this.GetConditionFormMaps(children3));
-                        return true;
-                    }else {
-                        argsItem.setChildren(this.GetConditionFormMaps(children));
-                        return true;
+                // 高级搜索嵌套
+                if (rule.get("type") != null){
+                    argsItem.setType((String) rule.get("type"));
+                    List<Map<String,Object>> children = (List<Map<String, Object>>) rule.get("children");
+                    for (Map<String, Object> child : children) {
+                        // children中还有
+                        if (child.get("children") != null && child.get("type") != null) {
+                            List<Map<String, Object>> children3 = (List<Map<String, Object>>) child.get("children");
+                            argsItem.setChildren(this.GetConditionFormMaps(children3));
+                            return true;
+                        }
                     }
-
+                }else {
+                    // 简版搜索
+                    solr.add(rule);
                 }
+            }
+            if (solr.size() != 0) {
+                argsItem.setChildren(this.GetConditionFormMaps(solr));
+                return true;
             }
         }
         return false;
@@ -93,7 +100,7 @@ public class SearchArgsMap {
         List<SearchArgs.Condition> list = new ArrayList<>();
         for (Map<String, Object> stringObjectMap : content) {
             SearchArgs.Condition t = new SearchArgs.Condition();
-            String names[] = Maputil.BeanKeys(t.getClass());
+            String[] names = Maputil.BeanKeys(t.getClass());
             for (String name : names) {
                 Field field = t.getClass().getField(name);
                 if (field.getType().isInstance(stringObjectMap.get(name))){

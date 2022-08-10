@@ -5,11 +5,11 @@
 
     <insert id="Insertlog">
         INSERT INTO log(appid,orgid,level, eventype,logmessage, logdetail,
-                        userid,recorddate,ipaddress,createdate, createby, identity)
+                        userid,recorddate,ipaddress,createdate, createby, identity,appname)
         VALUES(#{LogOperation.appid},#{LogOperation.orgid},#{LogOperation.level},#{LogOperation.eventype},
                #{LogOperation.logmessage}, #{LogOperation.logdetail},#{LogOperation.userid},
                #{LogOperation.recorddate},#{LogOperation.ipaddress},NOW(),#{LogOperation.createby},
-               #{LogOperation.identity}
+               #{LogOperation.identity},#{LogOperation.appname}
          )
     </insert>
 </mapper>

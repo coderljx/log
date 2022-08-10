@@ -26,6 +26,9 @@ public class LogAPI {
     private final Rocket rocket;
     private final LogDaoService logDevelopDaoService;
     private final String Topic = "log";
+    private final String[] tag1 = new String[]{"trace", "info", "warn", "error", "fatal"};
+    private final String[] tag = new String[]{"正常","轻微","一般","严重","非常严重"};
+
 
     @Autowired()
     public LogAPI(Rocket rocket,
@@ -35,63 +38,14 @@ public class LogAPI {
     }
 
     /**
-     {
-     "args": {
-
-     "filters": {
-     "rules": [
-
-     {
-     "type": "and",
-     "children": [{
-     "type": "and",
-     "children": [{
-     "field": "illegalLevel",
-     "operator": "in",
-     "values": ["一般"]
-     },
-     {
-     "field": "createDate",
-     "operator": "range",
-     "value": "2022-08-07 00:00:00#2022-08-08 23:59:59"
-     },
-     {
-     "field": "platformName",
-     "operator": "in",
-     "value": ["淘宝"],
-     "values": ["淘宝"]
-     }]
-
-     }]
-
-
-     }
-
-     ]
-     },
-
-
-
-
-
-
-     "order": [{
-     "field": "claimedDate",
-     "order_type": "DESC"
-     }],
-     "search": "",
-     "per_page": 20,
-     "curr_page": 1
-     }
-     }
      * 生产消息
+     * @param maps
      */
     @PostMapping ("/create")
     public Response create (@RequestBody Map<String, Object> maps,
                             HttpServletRequest request){
         Map<String, Object> payload = (Map<String, Object>) maps.get("payload");
-        if (payload == null)
-            return new Response<>(Coco.ParamsError);
+        if (payload == null)  return new Response<>(Coco.ParamsError);
 
         try {
             String date = (String) payload.get("recorddate");
@@ -104,8 +58,7 @@ public class LogAPI {
                 return new Response<>(Coco.ParamsError);
 
             boolean Null = Maputil.MapNotNull(payload,LogMessage.class);
-            if (!Null)
-                return new Response<>(Coco.ParamsNullError);
+            if (!Null) return new Response<>(Coco.ParamsNullError);
 
         } catch (ParseException e) {
             e.printStackTrace();
@@ -119,24 +72,23 @@ public class LogAPI {
             e.printStackTrace();
             return new Response<>(Coco.ParamsTypeError);
         }
-        if (log == null)
-            return new Response<>(Coco.ParamsError);
+        if (log == null)   return new Response<>(Coco.ParamsError);
 
-//        String[] tag = new String[]{"trace", "debug", "info", "warn", "error", "fatal"};
-        String[] tag = new String[]{"正常","轻微","一般","严重","非常严重"};
-        int i = 0;
-        for (String s : tag) {
-            if (s.equals(log.getLevel())){
-                i++;
+        int i = -1;
+        String level = log.getLevel();
+        for (int i1 = 0; i1 < tag.length; i1++) {
+            if (tag[i1].equals(level)){
+                i = i1;
+                break;
             }
         }
-        if (i == 0)
-            return new Response<>(Coco.LogTypeError);
+        if (i == -1) return new Response<>(Coco.LogTypeError);
 
         try {
-            this.rocket.Send(Topic,log.getLevel(),log);
+            this.rocket.Send(Topic,tag1[i],log);
             return new Response<>();
         }catch (Exception e) {
+            e.printStackTrace();
             return new Response<>(Coco.ServerError);
         }
     }
@@ -154,7 +106,7 @@ public class LogAPI {
     }
 
     /**
-     * 模糊/精确查询
+     * 模糊/精确查询 (废弃,合并到多条件查询)
      * @param maps
      * @return
      */

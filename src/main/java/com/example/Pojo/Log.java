@@ -42,6 +42,8 @@ public class Log implements Serializable {
 //    @Field (type= FieldType.Text)
     private String appid;
 
+    private String appname;
+
 //    @Field (type= FieldType.Text)
     private String orgid;
 

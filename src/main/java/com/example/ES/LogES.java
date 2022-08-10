@@ -17,4 +17,6 @@ public interface LogES extends ElasticsearchRepository<Log,Long> {
     List<Log> findByRecorddateBefore(long date, PageRequest request);
     List<Log> findByRecorddateBetween(long start,long end, PageRequest request);
 
+    List<Log> findByLevel(String level,PageRequest request);
+
 }

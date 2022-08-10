@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 import javax.annotation.Resource;
 import java.lang.reflect.Field;
 import java.text.ParseException;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -113,31 +114,45 @@ public class EsTemplate {
     public <T> SearchHits<T> SearchLikeMutil3(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int size, int page, Class<T> cls) throws ParseException {
         BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
         String type = argsItem.getType();
+        String[] time = new String[2];
         List<SearchArgs.Condition> children = argsItem.getChildren();
         RangeQueryBuilder rangeQueryBuilder;
         for (SearchArgs.Condition child : children) {
             String filed = child.getField();
             String operator = child.getOperator();
-            if (operator.equals("=")){
+            if (operator.equals("eq")){
                 filed = Maputil.ReplaceAddKeyword(filed);
             }
+            if (operator.equals("ge")) {
+                time[0] = child.getValue();
+                continue;
+            }
+            if (operator.equals("le")){
+                time[1] = child.getValue();
+            }
             String value = "";
-            List<String> values;
-            if (child.getValue() != null) value = child.getValue();
-
-            //多字段只有一种情况，就是模块查询
-            if (child.getValues() != null){
-                values = child.getValues();
+            if (child.getValue() != null) {
+                value = child.getValue();
+                if (value.contains(",")) {
+                    String[] split = value.split(",");
+                    for (String s : split) {
+                        boolQueryBuilder.must(new MatchQueryBuilder(filed,s));
+                    }
+                    continue;
+                }
+            }
+            //如果用的是多字段查询
+            if (operator.equals("in")){
+                List<String> values = child.getValues();
                 for (String s : values) {
                     boolQueryBuilder.must(new MatchQueryBuilder(filed,s));
                 }
                 continue;
             }
-            // 如果本次查询条件是：时间
-            if (operator.equals("range")){
-                String[] lons = value.split("#");
-                long start = TimeUtils.Parselong(lons[0]);
-                long end = TimeUtils.Parselong(lons[1]);
+//            // 如果本次查询条件是：时间
+            if (time[0] != null && time[1] != null){
+                Date start = TimeUtils.ParseDate(time[0]);
+                Date end = TimeUtils.ParseDate(time[1]);
                 rangeQueryBuilder = new RangeQueryBuilder(filed);
                 rangeQueryBuilder.gte(start);
                 rangeQueryBuilder.lte(end);

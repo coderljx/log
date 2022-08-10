@@ -75,6 +75,13 @@ public class ComptrollerService {
             return findall;
         }
 
+        List<SearchArgs.Condition> children = argsItem.getChildren();
+        for (SearchArgs.Condition child : children) {
+            if (child.getField().equals("moudel") && child.getValue().equals("")){
+                List<Model> modelList = this.GetModel();
+                child.setValue("");
+            }
+        }
         SearchHits<comptroller> searchHits = this.esTemplate.SearchLikeMutil3(argsItem, order, per_page, curr_page, comptroller.class);
         Response<List<comptrollerReturn>> parse = this.Parse(searchHits);
         return parse;
@@ -153,7 +160,6 @@ public class ComptrollerService {
             comptroller.setRecorddate(newdate);
             datas.add(comptroller);
         }
-
         return new Response<>(datas, Math.toIntExact(totalHits));
     }
 
@@ -164,17 +170,23 @@ public class ComptrollerService {
         Model time = ModelReturn.Time();
         Model model = new Model();
         model.setField("model");
-        model.setLabel("=");
+        model.setLabel("eq");
         model.setOperator("操作模块");
         model.setType("checkbox");
         model.setDatatype("string");
         model.setCanInput("no");
         List<String> list = this.comptrollerDao.GetMoudel();
+        list.add("全部");
         List<Model.label> labelList = new ArrayList<>();
         for (String s : list) {
             Model.label label = new Model.label();
-            label.setLabel(s);
-            label.setValue(s);
+            if (s.equals("全部")){
+                label.setLabel(s);
+                label.setValue("");
+            }else {
+                label.setLabel(s);
+                label.setValue(s);
+            }
             labelList.add(label);
         }
         model.setOtions(labelList);

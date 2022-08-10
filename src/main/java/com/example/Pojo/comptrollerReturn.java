@@ -21,6 +21,7 @@ public class comptrollerReturn {
  private String params;
  private String moudel;
  private String userid;
+ private String username;
  private String recorddate;
  private String ipaddress;
  private String createby;
