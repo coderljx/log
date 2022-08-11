@@ -46,17 +46,6 @@ public class SearchArgs {
         public List<String> values;
         public String type;
         public List<Condition> children;
-
-        public String field(){
-            return "field";
-        }
-        public String operator(){
-            return "operator";
-        }
-        public String value(){
-            return "value";
-        }
-
     }
 
     @Data

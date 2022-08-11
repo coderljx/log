@@ -145,7 +145,7 @@ public class EsTemplate {
             if (operator.equals("in")){
                 List<String> values = child.getValues();
                 for (String s : values) {
-                    boolQueryBuilder.must(new MatchQueryBuilder(filed,s));
+                    boolQueryBuilder.should(new MatchQueryBuilder(filed,s));
                 }
                 continue;
             }

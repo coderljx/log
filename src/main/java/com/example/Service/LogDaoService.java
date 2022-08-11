@@ -161,10 +161,14 @@ public class LogDaoService {
 
         List<SearchArgs.Condition> children = argsItem.getChildren();
         for (SearchArgs.Condition child : children) {
-             if (child.getField().equals("level") && child.getValue().equals("")){
-                  String values1 = "正常," + "轻微," + "一般," + "严重," + "非常严重";
-                  child.setValue(values1);
-             }
+            // 如果前端传入的是""， 表示查询所有
+            if (child.getField().equals("level") && child.getOperator().equals("in")){
+                if (child.getValues().get(0).equals("")){
+                    String[] strings = {"正常" , "轻微" , "一般" , "严重" ,"非常严重"};
+                    List<String> list = Arrays.asList(strings);
+                    child.setValues(list);
+                }
+            }
         }
         SearchHits<Log> searchHits = this.esTemplate.SearchLikeMutil3(argsItem, order, per_page, curr_page, Log.class);
         Response<List<LogReturn>> parse = this.Parse(searchHits);

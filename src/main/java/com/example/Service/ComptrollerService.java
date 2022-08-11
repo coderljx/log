@@ -77,9 +77,11 @@ public class ComptrollerService {
 
         List<SearchArgs.Condition> children = argsItem.getChildren();
         for (SearchArgs.Condition child : children) {
-            if (child.getField().equals("moudel") && child.getValue().equals("")){
-                List<Model> modelList = this.GetModel();
-                child.setValue("");
+            if (child.getField().equals("moudel") && child.operator.equals("in")){
+                if (child.getValues().get(0).equals("")){
+                    List<String> list = this.comptrollerDao.GetMoudel();
+                    child.setValues(list);
+                }
             }
         }
         SearchHits<comptroller> searchHits = this.esTemplate.SearchLikeMutil3(argsItem, order, per_page, curr_page, comptroller.class);
