@@ -23,14 +23,14 @@ import org.elasticsearch.index.query.*;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.fetch.subphase.FetchSourceContext;
 import org.elasticsearch.xcontent.XContentType;
-import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-@Component
+//@Component
 public class ES {
 
     /**
@@ -39,6 +39,7 @@ public class ES {
      */
     private final RestHighLevelClient restHighLevelClient;
 
+    @Autowired
     public ES(RestHighLevelClient restHighLevelClient){
         this.restHighLevelClient = restHighLevelClient;
     }

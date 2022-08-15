@@ -26,8 +26,8 @@ public class LogAPI {
     private final Rocket rocket;
     private final LogDaoService logDevelopDaoService;
     private final String Topic = "log";
-    private final String[] tag1 = new String[]{"trace", "info", "warn", "error", "fatal"};
-    private final String[] tag = new String[]{"正常","轻微","一般","严重","非常严重"};
+    private final String[] tag1 = {"trace", "info", "warn", "error", "fatal"};
+    private final String[] tag =  {"正常","轻微","一般","严重","非常严重"};
 
 
     @Autowired()
@@ -94,6 +94,9 @@ public class LogAPI {
     }
 
 
+    /**
+     * (已废弃，合并到多条件查询)
+     */
     @GetMapping("/findall")
     public Response SelectAll(@RequestParam("from") Integer from,
                               @RequestParam("to") Integer to){
@@ -106,7 +109,7 @@ public class LogAPI {
     }
 
     /**
-     * 模糊/精确查询 (废弃,合并到多条件查询)
+     * 模糊/精确查询(已废弃，合并到多条件查询)
      * @param maps
      * @return
      */
@@ -163,12 +166,12 @@ public class LogAPI {
     }
 
     /**
-     * 模糊查询
+     * 模糊查询(已废弃，合并到多条件查询)
      * @param maps
      * @return
      */
     @SuppressWarnings ("unchecked")
-//    @PostMapping ("/search/like")
+    @PostMapping ("/search/like")
     public Response Selectes(@RequestBody Map<String, Object> maps) {
 
         int size;
@@ -213,6 +216,10 @@ public class LogAPI {
     }
 
 
+    /**
+     * 获取日志的查询条件
+     * @return
+     */
     @GetMapping("/model")
     public Response Model(){
         try {
@@ -249,7 +256,6 @@ public class LogAPI {
             return new Response<>(Coco.ParamsError);
         }
     }
-
 
 
 

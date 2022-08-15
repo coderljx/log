@@ -1,8 +1,5 @@
 package com.example;
 
-import org.apache.http.HttpHost;
-import org.elasticsearch.client.RestClient;
-import org.elasticsearch.client.RestHighLevelClient;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
@@ -10,6 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.servlet.ServletComponentScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.elasticsearch.repository.config.EnableElasticsearchRepositories;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
@@ -18,6 +16,7 @@ import redis.clients.jedis.JedisPoolConfig;
 @MapperScan("com.example.Dao")
 @ServletComponentScan("com.example.Run")
 @EnableElasticsearchRepositories (basePackages = "com.example.ES")
+@EnableScheduling
 public class Log2Application {
 
     @Value("${redis.host}")

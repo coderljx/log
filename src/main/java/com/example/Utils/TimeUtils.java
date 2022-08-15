@@ -52,12 +52,25 @@ public class TimeUtils {
     }
 
     /**
-     * 将date转换成另一中样式显示
+     * 对date 进行格式化，按照 yyyy-MM-dd HH:mm:ss 格式显示
      * @param date
      */
     public static String ParseDate(Date date) throws Exception{
         String time = "yyyy-MM-dd HH:mm:ss";
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat(time);
+        String format = simpleDateFormat.format(date);
+        return format;
+    }
+
+    public static String ParseDate(Date date,int type) throws Exception{
+        String time = "yyyy-MM-dd HH:mm:ss";
+        String times = "yyyy-MM-dd";
+        String koko = "";
+        if (type == 1) koko = time;
+
+        if (type == 2) koko = times;
+
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat(koko);
         String format = simpleDateFormat.format(date);
         return format;
     }

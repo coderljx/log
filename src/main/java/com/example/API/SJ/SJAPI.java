@@ -91,7 +91,7 @@ public class SJAPI {
     }
 
     /**
-     * 精确查询
+     * 精确查询 (已废弃，合并)
      */
     @PostMapping("/search/oto")
     public Response searchEsoto(@RequestBody Map<String,Object> maps)  {
@@ -142,7 +142,10 @@ public class SJAPI {
 
     }
 
-    @GetMapping ("/findall")
+    /**
+     * 已废弃
+     */
+    @GetMapping ("/findall") 
     public Response SelectAll(@RequestParam("from") Integer from,
                               @RequestParam("to") Integer to){
         try {
@@ -154,8 +157,7 @@ public class SJAPI {
     }
 
     /**
-     * 模糊查询
-     * @param maps
+     * 模糊查询 (已废弃)
      */
     @PostMapping("/search/like")
     public Response searchEsLike(@RequestBody Map<String,Object> maps){

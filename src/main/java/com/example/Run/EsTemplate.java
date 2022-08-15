@@ -10,6 +10,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
 import org.springframework.data.elasticsearch.core.IndexOperations;
 import org.springframework.data.elasticsearch.core.SearchHits;
+import org.springframework.data.elasticsearch.core.document.Document;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
 import org.springframework.stereotype.Component;
@@ -34,7 +35,8 @@ public class EsTemplate {
      */
     public <T> boolean IndexExists(Class<T> cls){
         IndexOperations indexOperations = elasticsearchRestTemplate.indexOps(cls);
-         if (indexOperations.exists() ){
+        Document mapping = indexOperations.createMapping(cls);
+        if (indexOperations.exists() ){
              return true;
          }
         return indexOperations.create();
