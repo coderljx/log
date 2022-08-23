@@ -4,15 +4,20 @@ import com.example.API.Log.LogMessage;
 import com.example.Pojo.Model;
 import com.example.Pojo.comptroller;
 import com.example.Pojo.comptrollerReturn;
+import com.example.Run.Excel;
 import com.example.Run.Rocket;
 import com.example.Service.ComptrollerService;
 import com.example.Utils.*;
+import org.apache.poi.ss.usermodel.Workbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.util.List;
@@ -38,7 +43,7 @@ public class SJAPI {
     }
 
     @GetMapping("/model")
-    public Response model() throws Exception{
+    public Response<?> model() throws Exception{
         List<Model> list = this.comptrollerService.GetModel();
         return new Response<>(list);
     }
@@ -46,7 +51,7 @@ public class SJAPI {
 
 
     @PostMapping("/config/setting")
-    public Response Config(@RequestBody Map<String,Object> maps,
+    public Response<?> Config(@RequestBody Map<String,Object> maps,
                             HttpServletRequest request){
         Map<String, Object> payload = (Map<String, Object>) maps.get("payload");
         if (payload == null)
@@ -94,7 +99,7 @@ public class SJAPI {
      * 精确查询 (已废弃，合并)
      */
     @PostMapping("/search/oto")
-    public Response searchEsoto(@RequestBody Map<String,Object> maps)  {
+    public Response<?> searchEsoto(@RequestBody Map<String,Object> maps)  {
         if (maps.size() == 0)
             return new Response<>(Coco.ParamsNullError);
 
@@ -146,7 +151,7 @@ public class SJAPI {
      * 已废弃
      */
     @GetMapping ("/findall") 
-    public Response SelectAll(@RequestParam("from") Integer from,
+    public Response<?> SelectAll(@RequestParam("from") Integer from,
                               @RequestParam("to") Integer to){
         try {
             return this.comptrollerService.findall(from,to);
@@ -160,7 +165,7 @@ public class SJAPI {
      * 模糊查询 (已废弃)
      */
     @PostMapping("/search/like")
-    public Response searchEsLike(@RequestBody Map<String,Object> maps){
+    public Response<?> searchEsLike(@RequestBody Map<String,Object> maps){
         int size;
         int page;
         Map<String, Object> payloads;
@@ -207,7 +212,7 @@ public class SJAPI {
      * @param maps
      */
     @PostMapping("/search/likemutil")
-    public Response searchEsotoMutil(@RequestBody Map<String,Object> maps){
+    public  Response<?> searchEsotoMutil(@RequestBody Map<String,Object> maps){
         try {
             Map<String,Object> maps1 = (Map<String, Object>) maps.get("args");
             int per_page = (int) maps1.get("per_page");
@@ -227,6 +232,31 @@ public class SJAPI {
             e.printStackTrace();
             return new Response<>(Coco.ParamsError);
         }
+    }
+
+
+    @GetMapping("/down")
+    public void ExportExcel(Map<String,Object> maps, HttpServletResponse response){
+//        response.setContentType("application/octet-stream");//
+//        response.setHeader("content-type", "application/octet-stream");
+        response.setHeader("Content-Disposition", "attachment;fileName=" + "1.xls");// 设置文件名
+        ServletOutputStream outputStream = null;
+        try {
+            outputStream = response.getOutputStream();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        Excel.CreateData("2","2","s","s","3","s");
+        Excel.CreateData("3","2","s","s","3","s");
+        Workbook woe = Excel.CreateData("4","2","s","s","3","s");
+
+        try {
+            woe.write(outputStream);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
 
 

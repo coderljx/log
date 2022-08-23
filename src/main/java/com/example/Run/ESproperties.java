@@ -17,7 +17,6 @@ import java.util.Date;
 import java.util.Map;
 
 @Component
-//@ConfigurationProperties (prefix = "spring.es")
 @Data
 public class ESproperties {
     private final Logger mylog = LoggerFactory.getLogger(ESproperties.class);
