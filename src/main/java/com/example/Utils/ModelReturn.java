@@ -38,7 +38,7 @@ public class ModelReturn {
                 c.add(Calendar.DAY_OF_WEEK, -14);
                 Date time = c.getTime();
                 times[i] = ParseString(CurrentTime, time);
-            }
+            }                            
             if (i == 5) {
                 c.add(Calendar.MONTH, -1);
                 Date time = c.getTime();
@@ -81,8 +81,7 @@ public class ModelReturn {
     private static String ParseString(String current, String end) {
         String[] s1 = current.split(" ");
         String[] s2 = end.split(" ");
-        String value = s2[0] + "#" + s1[0];
-        return value;
+        return s2[0] + "#" + s1[0];
     }
 
     private static String ParseString(String current, Date date) throws Exception {

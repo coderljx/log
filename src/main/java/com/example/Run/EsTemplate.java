@@ -115,7 +115,6 @@ public class EsTemplate {
      */
     public <T> SearchHits<T> SearchLikeMutil3(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int size, int page, Class<T> cls) throws ParseException {
         BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
-        String type = argsItem.getType();
         String[] time = new String[2];
         List<SearchArgs.Condition> children = argsItem.getChildren();
         RangeQueryBuilder rangeQueryBuilder;
@@ -151,7 +150,7 @@ public class EsTemplate {
                 }
                 continue;
             }
-//            // 如果本次查询条件是：时间
+            // 如果本次查询条件是：时间
             if (time[0] != null && time[1] != null){
                 Date start = TimeUtils.ParseDate(time[0]);
                 Date end = TimeUtils.ParseDate(time[1]);
@@ -161,7 +160,6 @@ public class EsTemplate {
                 boolQueryBuilder.must(rangeQueryBuilder);
                 continue;
             }
-
             boolQueryBuilder.must(new MatchQueryBuilder(filed,value));
         }
         Sort.Direction sor = null;

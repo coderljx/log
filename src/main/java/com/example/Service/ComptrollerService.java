@@ -5,7 +5,6 @@ import com.example.Pojo.Model;
 import com.example.Pojo.comptroller;
 import com.example.Pojo.comptrollerReturn;
 import com.example.Run.EsTemplate;
-import com.example.Run.Redis;
 import com.example.Utils.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,16 +25,13 @@ public class ComptrollerService {
     private final com.example.Dao.comptrollerDao comptrollerDao;
     private final com.example.ES.comptrollerES comptrollerES;
     private final EsTemplate esTemplate;
-    private final Redis redis;
 
     @Autowired
     public ComptrollerService(comptrollerDao comptrollerDao,
                               com.example.ES.comptrollerES comptrollerES,
-                              Redis redis,
                               EsTemplate esTemplate) {
         this.comptrollerDao = comptrollerDao;
         this.comptrollerES = comptrollerES;
-        this.redis = redis;
         this.esTemplate = esTemplate;
     }
 
@@ -58,7 +54,6 @@ public class ComptrollerService {
             }
         } catch (Exception e) {
             e.printStackTrace();
-            this.redis.InsertFail(comptroller);
             return false;
         }
     }

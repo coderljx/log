@@ -62,6 +62,7 @@ public class Maputil {
     public static <V> Map<String,Object> ObjectToMap(V type) throws IllegalAccessException {
         Field[] fields = GetField(type.getClass());
         Map<String,Object> result = new HashMap<>();
+        assert fields != null;
         for (Field field : fields) {
             field.setAccessible(true);
             Object o = field.get(type);
@@ -69,9 +70,8 @@ public class Maputil {
 
             if (o instanceof String){
                 String value = (String) o;
-                if (value.trim().equals("")){
-                    continue;
-                }
+                if (value.trim().equals(""))  continue;
+
                 result.put(field.getName(),value);
             }
         }
@@ -381,8 +381,10 @@ public class Maputil {
         } catch (InstantiationException e) {
             e.printStackTrace();
         }
+        assert newins != null;
         Field[] fields2 = GetField(newins.getClass());
 
+        assert fields1 != null;
         for (Field field : fields1) {
             field.setAccessible(true);
             String FieldName = field.getName();
@@ -390,6 +392,7 @@ public class Maputil {
             Object o = field.get(cls1);
             if (o == null) continue;
 
+            assert fields2 != null;
             for (Field field1 : fields2) {
                 field1.setAccessible(true);
                 String FieldName2 = field1.getName();

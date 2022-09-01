@@ -59,11 +59,6 @@
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
-       <!--     redis   -->
-        <dependency>
-            <groupId>redis.clients</groupId>
-            <artifactId>jedis</artifactId>
-        </dependency>
        <!--  es      -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

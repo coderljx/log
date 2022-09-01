@@ -6,16 +6,16 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class TimeUtils {
-    private static String Time;
 
     private static String Validate(String date){
         if (date.length() == 10 || date.length() == 19){
+            String time;
             if (date.contains(":") && date.length() == 19){
-                Time = "yyyy-MM-dd HH:mm:ss";
+                time = "yyyy-MM-dd HH:mm:ss";
             }else {
-                Time = "yyyy-MM-dd";
+                time = "yyyy-MM-dd";
             }
-            return  Time;
+            return time;
         }
         return null;
     }
@@ -38,8 +38,7 @@ public class TimeUtils {
 
         String Time = Validate(date);
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat(Time);
-        Date parse = new Date(Parselong(date));
-        return parse;
+        return new Date(Parselong(date));
     }
 
     /**
@@ -58,8 +57,7 @@ public class TimeUtils {
     public static String ParseDate(Date date) throws Exception{
         String time = "yyyy-MM-dd HH:mm:ss";
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat(time);
-        String format = simpleDateFormat.format(date);
-        return format;
+        return simpleDateFormat.format(date);
     }
 
     public static String ParseDate(Date date,int type) throws Exception{
@@ -71,8 +69,7 @@ public class TimeUtils {
         if (type == 2) koko = times;
 
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat(koko);
-        String format = simpleDateFormat.format(date);
-        return format;
+        return simpleDateFormat.format(date);
     }
 
 

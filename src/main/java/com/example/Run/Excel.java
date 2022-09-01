@@ -83,9 +83,8 @@ public class Excel {
         if (workbook == null){
             workbook = CreateHeader(SheetName);
         }
-        int Line = data.length;
-        Row row = createRow( getRowNum() + 1);
-        for (int i = 0; i < Line; i++) {
+        Row row = createRow( getRowNum() + 1 );
+        for (int i = 0; i < data.length; i++) {
             createCol(row, (Object) data);
         }
         return workbook;

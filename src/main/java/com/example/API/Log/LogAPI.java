@@ -26,8 +26,6 @@ public class LogAPI {
     private final Rocket rocket;
     private final LogDaoService logDevelopDaoService;
     private final String Topic = "log";
-    private final String[] tag1 = {"trace", "info", "warn", "error", "fatal"};
-    private final String[] tag =  {"正常","轻微","一般","严重","非常严重"};
 
 
     @Autowired()
@@ -42,11 +40,14 @@ public class LogAPI {
      * @param maps
      */
     @PostMapping ("/create")
-    public Response create (@RequestBody Map<String, Object> maps,
+    @SuppressWarnings ({"unchecked"})
+    public Response<?> create (@RequestBody Map<String, Object> maps,
                             HttpServletRequest request){
         Map<String, Object> payload = (Map<String, Object>) maps.get("payload");
         if (payload == null)  return new Response<>(Coco.ParamsError);
 
+        final String[] tag1 = {"trace", "info", "warn", "error", "fatal"};
+        final String[] tag =  {"正常","轻微","一般","严重","非常严重"};
         try {
             String date = (String) payload.get("recorddate");
             Timestamp timestamp = TimeUtils.ParseTimestamp(date);
@@ -54,42 +55,34 @@ public class LogAPI {
             // ip在前端接口中是没有传递的，如果不手动设置，则无法通过验证
             payload.put("ipaddress", Maputil.GetIp(request));
             boolean Valitation = Maputil.MapValiType(payload, LogMessage.class);
-            if (!Valitation)
-                return new Response<>(Coco.ParamsError);
+            if (!Valitation) return new Response<>(Coco.ParamsError);
 
             boolean Null = Maputil.MapNotNull(payload,LogMessage.class);
             if (!Null) return new Response<>(Coco.ParamsNullError);
 
-        } catch (ParseException e) {
-            e.printStackTrace();
-            return new Response<>(Coco.ParamsTypeError);
-        }
-
-        LogMessage log;
-        try {
+            LogMessage log;
             log = Maputil.MapToObject(payload, LogMessage.class);
-        } catch (IllegalAccessException e) {
+            if (log == null) return new Response<>(Coco.ParamsError);
+
+            int i = -1;
+            String level = log.getLevel();
+            for (int i1 = 0; i1 < tag.length; i1++) {
+                if (tag[i1].equals(level)){
+                    i = i1;
+                    break;
+                }
+            }
+            if (i == -1) return new Response<>(Coco.LogTypeError);
+            try {
+                this.rocket.Send(Topic,tag1[i],log);
+                return new Response<>();
+            }catch (Exception e) {
+                e.printStackTrace();
+                return new Response<>(Coco.ServerError);
+            }
+        } catch (ParseException | IllegalAccessException e) {
             e.printStackTrace();
             return new Response<>(Coco.ParamsTypeError);
-        }
-        if (log == null)   return new Response<>(Coco.ParamsError);
-
-        int i = -1;
-        String level = log.getLevel();
-        for (int i1 = 0; i1 < tag.length; i1++) {
-            if (tag[i1].equals(level)){
-                i = i1;
-                break;
-            }
-        }
-        if (i == -1) return new Response<>(Coco.LogTypeError);
-
-        try {
-            this.rocket.Send(Topic,tag1[i],log);
-            return new Response<>();
-        }catch (Exception e) {
-            e.printStackTrace();
-            return new Response<>(Coco.ServerError);
         }
     }
 
@@ -98,7 +91,8 @@ public class LogAPI {
      * (已废弃，合并到多条件查询)
      */
     @GetMapping("/findall")
-    public Response SelectAll(@RequestParam("from") Integer from,
+    @SuppressWarnings ({"unchecked"})
+    public Response<?> SelectAll(@RequestParam("from") Integer from,
                               @RequestParam("to") Integer to){
         try {
             return this.logDevelopDaoService.findall(PageRequest.of(from, to));
@@ -114,7 +108,8 @@ public class LogAPI {
      * @return
      */
     @PostMapping ("/search/term")
-    public Response SelectesTrem(@RequestBody Map<String, Object> maps) {
+    @SuppressWarnings ({"unchecked"})
+    public Response<?> SelectesTrem(@RequestBody Map<String, Object> maps) {
 
         int size;
         int page;
@@ -172,7 +167,7 @@ public class LogAPI {
      */
     @SuppressWarnings ("unchecked")
     @PostMapping ("/search/like")
-    public Response Selectes(@RequestBody Map<String, Object> maps) {
+    public Response<?> Selectes(@RequestBody Map<String, Object> maps) {
 
         int size;
         int page;
@@ -221,7 +216,8 @@ public class LogAPI {
      * @return
      */
     @GetMapping("/model")
-    public Response Model(){
+    @SuppressWarnings ({"unchecked"})
+    public Response<?> Model(){
         try {
             List<Model> moudel = this.logDevelopDaoService.Moudel();
             return new Response<>(moudel);
@@ -235,7 +231,8 @@ public class LogAPI {
      * 多条件查询
      */
     @PostMapping ("/search/likemutil")
-    public Response Selectesl(@RequestBody Map<String,Object> maps) {
+    @SuppressWarnings ({"unchecked"})
+    public Response<?> Selectesl(@RequestBody Map<String,Object> maps) {
         try {
             Map<String,Object> maps1 = (Map<String, Object>) maps.get("args");
             int per_page = (int) maps1.get("per_page");

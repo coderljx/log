@@ -2,6 +2,9 @@ package com.example.Pojo;
 
 import lombok.Data;
 
+/**
+ * 需要返回的字段写入，不写的字段将不做返回
+ */
 @Data
 public class LogReturn {
 

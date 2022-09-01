@@ -5,12 +5,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.servlet.ServletComponentScan;
-import org.springframework.context.annotation.Bean;
 import org.springframework.data.elasticsearch.repository.config.EnableElasticsearchRepositories;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.JedisPoolConfig;
 
 @SpringBootApplication(scanBasePackages = "com")
 @MapperScan("com.example.Dao")
@@ -21,15 +17,6 @@ public class Log2Application {
 
     @Value("${redis.host}")
     private String host;
-
-    @Bean
-    public Jedis Setjedis(){
-        JedisPoolConfig config = new JedisPoolConfig();
-        config.setMaxTotal(30);
-        config.setMaxIdle(30);
-        JedisPool pool = new JedisPool(config,host,6379);
-        return pool.getResource();
-    }
     
 //    @Bean
 //    public RestHighLevelClient restHighLevelClient(){

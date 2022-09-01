@@ -9,7 +9,6 @@ import com.example.Pojo.Model;
 import com.example.Run.Email;
 import com.example.Run.EmailProperties;
 import com.example.Run.EsTemplate;
-import com.example.Run.Redis;
 import com.example.Utils.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,7 +27,6 @@ public class LogDaoService {
     private final LogDao logDevelopDao;
     private final EsTemplate esTemplate;
     private final LogES logES;
-    private final Redis redis;
     private final Email email;
     private final EmailProperties emailProperties;
     private final String[] values = new String[]{"全部","正常","轻微","一般","严重","非常严重"};
@@ -38,13 +36,11 @@ public class LogDaoService {
                          EsTemplate esTemplate,
                          EmailProperties emailProperties,
                          LogES logES,
-                         Redis redis,
                          Email email){
         this.logDevelopDao = logDevelopDao;
         this.esTemplate = esTemplate;
         this.emailProperties = emailProperties;
         this.logES = logES;
-        this.redis = redis;
         this.email = email;
     }
 
@@ -63,7 +59,6 @@ public class LogDaoService {
                }
             }catch (Exception e){
                 e.printStackTrace();
-                this.redis.InsertFail(logOperation);
             }
         }
     }
@@ -171,10 +166,19 @@ public class LogDaoService {
             }
         }
         SearchHits<Log> searchHits = this.esTemplate.SearchLikeMutil3(argsItem, order, per_page, curr_page, Log.class);
-        Response<List<LogReturn>> parse = this.Parse(searchHits);
-        return parse;
+        return this.Parse(searchHits);
     }
 
+    public void NewResturn(SearchArgs.ArgsItem argsItem,SearchArgs.Order order,int per_page,int curr_page){
+    }
+
+
+    /**
+     * 将es查询的结果进行处理，返回List<LogReturn>数据
+     * @param searchHits
+     * @return
+     * @throws Exception
+     */
     private Response<List<LogReturn>> Parse(SearchHits<Log> searchHits) throws Exception {
         List<SearchHit<Log>> searchHits1 = searchHits.getSearchHits();
         long totalHits = searchHits.getTotalHits();
@@ -190,7 +194,11 @@ public class LogDaoService {
         return new Response<>(datas, Math.toIntExact(totalHits));
     }
 
-
+    /**
+     * 获得页面的标签模块
+     * @return
+     * @throws Exception
+     */
     public List<Model> Moudel() throws Exception {
         Model time = ModelReturn.Time();
         Model level = this.Level();
