@@ -11,6 +11,8 @@ import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
 import org.springframework.data.elasticsearch.core.IndexOperations;
 import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.core.document.Document;
+import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
+import org.springframework.data.elasticsearch.core.query.IndexQuery;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
 import org.springframework.stereotype.Component;
@@ -36,6 +38,10 @@ public class EsTemplate {
     public <T> boolean IndexExists(Class<T> cls){
         IndexOperations indexOperations = elasticsearchRestTemplate.indexOps(cls);
         Document mapping = indexOperations.createMapping(cls);
+
+        IndexCoordinates log = IndexCoordinates.of("log");
+        elasticsearchRestTemplate.index(new IndexQuery(),log);
+
         if (indexOperations.exists() ){
              return true;
          }

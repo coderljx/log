@@ -1,6 +1,7 @@
 package com.example.Run;
 
 import com.alibaba.fastjson.JSON;
+import com.example.Utils.Maputil;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
@@ -16,24 +17,24 @@ import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.action.update.UpdateResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
-import org.elasticsearch.client.indices.CreateIndexRequest;
-import org.elasticsearch.client.indices.CreateIndexResponse;
-import org.elasticsearch.client.indices.GetIndexRequest;
+import org.elasticsearch.client.indices.*;
+import org.elasticsearch.cluster.metadata.MappingMetadata;
+import org.elasticsearch.cluster.metadata.Template;
+import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.index.query.*;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.fetch.subphase.FetchSourceContext;
 import org.elasticsearch.xcontent.XContentType;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * 废弃
- */
-//@Component
+
+@Component
 public class ES {
 
     /**
@@ -47,8 +48,13 @@ public class ES {
         this.restHighLevelClient = restHighLevelClient;
     }
 
+    /**
+     * 索引是否存在
+     * @param index
+     * @return
+     */
     public boolean IndexIsExists(String index){
-        if (index.equals("")) {
+        if (!index.equals("")) {
             GetIndexRequest getIndexRequest = new GetIndexRequest(index);
             try {
                 return restHighLevelClient.indices().exists(getIndexRequest,RequestOptions.DEFAULT);
@@ -61,7 +67,7 @@ public class ES {
     }
 
     public boolean IdExists(String index,String id){
-        if (id.equals("")){
+        if (!id.equals("")){
             try {
                 GetRequest getIndexRequest = new GetRequest(index,id);
                 return restHighLevelClient.exists(getIndexRequest, RequestOptions.DEFAULT);
@@ -74,19 +80,62 @@ public class ES {
     }
 
     public boolean CreateIndex(String index) {
-        if (index.equals("")){
-            try {
-                CreateIndexRequest createIndex = new CreateIndexRequest(index);
+        if (!index.equals("")) return  false;
 
-                CreateIndexResponse createIndexResponse = restHighLevelClient
-                        .indices().create(createIndex, RequestOptions.DEFAULT);
-                return createIndexResponse.index().equals(index);
-            } catch (IOException e) {
-                e.printStackTrace();
-                return false;
-            }
+        try {
+            CreateIndexRequest createIndex = new CreateIndexRequest(index);
+            createIndex.settings(Settings.builder().put("number_of_shards", "1").put("number_of_replicas", "5"));
+
+            createIndex.mapping("\"properties\": {\n" +
+                    "    \"appid\" : {\n" +
+                    "      \"type\": \"text\"\n" +
+                    "    },\n" +
+                    "    \"appname\" : {\n" +
+                    "      \"type\": \"text\"\n" +
+                    "    },\n" +
+                    "    \"orgid\" : {\n" +
+                    "      \"type\": \"text\"\n" +
+                    "    },\n" +
+                    "    \"level\" : {\n" +
+                    "      \"type\": \"text\"\n" +
+                    "    },\n" +
+                    "    \"eventype\" : {\n" +
+                    "      \"type\": \"text\"\n" +
+                    "    },\n" +
+                    "    \"logmessage\" : {\n" +
+                    "      \"type\": \"text\"\n" +
+                    "    },\n" +
+                    "    \"logdetail\" : {\n" +
+                    "      \"type\": \"text\"\n" +
+                    "    },\n" +
+                    "    \"userid\" : {\n" +
+                    "      \"type\": \"text\"\n" +
+                    "    },\n" +
+                    "    \"recorddate\" : {\n" +
+                    "      \"type\": \"date\"\n" +
+                    "    },\n" +
+                    "    \"createby\" : {\n" +
+                    "      \"type\": \"text\"\n" +
+                    "    },\n" +
+                    "    \"createdate\" : {\n" +
+                    "      \"type\": \"date\"\n" +
+                    "    },\n" +
+                    "    \"ipaddress\" : {\n" +
+                    "      \"type\": \"ip\"\n" +
+                    "    },\n" +
+                    "    \"identity\" : {\n" +
+                    "      \"type\": \"text\"\n" +
+                    "    }\n" +
+                    "  }",XContentType.JSON);
+
+            CreateIndexResponse createIndexResponse = restHighLevelClient
+                    .indices().create(createIndex, RequestOptions.DEFAULT);
+            return createIndexResponse.index().equals(index);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
         }
-        return false;
+
     }
 
     public boolean DeleteIndex(String index){
@@ -104,11 +153,35 @@ public class ES {
         return false;
     }
 
-
     public <T> boolean AddDocument(String index, Map<String,T> maps) {
         IndexRequest indexRequest = new IndexRequest(index);
         indexRequest.source(maps);
         indexRequest.timeout("1s");
+        try {
+            if (!this.IndexIsExists(index)){
+                this.CreateIndex(index);
+            }
+            IndexResponse res = restHighLevelClient
+                    .index(indexRequest, RequestOptions.DEFAULT);
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * 添加一个文档，向指定的索引中, 索引不存在则创建
+     * @param index
+     * @param sources
+     * @param <T>
+     * @return
+     */
+    public <T> boolean AddDocument(String index, Object... sources) {
+        IndexRequest indexRequest = new IndexRequest(index);
+        indexRequest.source(JSON.toJSONString(sources),XContentType.JSON);
+        indexRequest.id("asdas");
+        indexRequest.timeout("2s");
         try {
             if (!this.IndexIsExists(index)){
                 this.CreateIndex(index);

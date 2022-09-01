@@ -6,14 +6,13 @@ import java.net.Socket;
 
 public class t {
     static {
-        System.out.println("sas");
+
     }
 
     public static void main(String[] args)  throws Exception{
 //        trans("/Users/brother/Desktop/Log2-0.0.1-SNAPSHOT.jar");
 
-        String a = "sad,sdasdas";
-        String[] c = a.split(",");
+
 
 
     }

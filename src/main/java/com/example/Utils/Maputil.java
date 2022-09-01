@@ -107,7 +107,7 @@ public class Maputil {
             }else {
                 declaredField.set(newInstance,null);
             }
-            mylog.info(declaredField + " : " + maps.get(declaredField.getName()));
+            //mylog.info(declaredField + " : " + maps.get(declaredField.getName()));
         }
         return newInstance;
     }

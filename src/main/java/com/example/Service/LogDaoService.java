@@ -6,6 +6,7 @@ import com.example.ES.LogES;
 import com.example.Pojo.Log;
 import com.example.Pojo.LogReturn;
 import com.example.Pojo.Model;
+import com.example.Run.ES;
 import com.example.Run.Email;
 import com.example.Run.EmailProperties;
 import com.example.Run.EsTemplate;
@@ -26,6 +27,7 @@ public class LogDaoService {
     private final Logger mylog = LoggerFactory.getLogger(LogDaoService.class);
     private final LogDao logDevelopDao;
     private final EsTemplate esTemplate;
+    private final ES es;
     private final LogES logES;
     private final Email email;
     private final EmailProperties emailProperties;
@@ -36,12 +38,14 @@ public class LogDaoService {
                          EsTemplate esTemplate,
                          EmailProperties emailProperties,
                          LogES logES,
+                         ES es,
                          Email email){
         this.logDevelopDao = logDevelopDao;
         this.esTemplate = esTemplate;
         this.emailProperties = emailProperties;
         this.logES = logES;
         this.email = email;
+        this.es = es;
     }
 
 
@@ -53,9 +57,12 @@ public class LogDaoService {
         if (logOperation != null){
             try {
                synchronized (this){
-                   this.logDevelopDao.Insertlog(logOperation);
-                   Log logOperation1 = this.logDevelopDao.SelectByid(this.logDevelopDao.Maxid());
-                   this.logES.save(logOperation1);
+                   //this.logDevelopDao.Insertlog(logOperation);
+                   //Log logOperation1 = this.logDevelopDao.SelectByid(this.logDevelopDao.Maxid());
+                  // this.logES.save(logOperation);
+                   Map<String, Object> stringObjectMap = Maputil.ObjectToMap(logOperation);
+                   es.AddDocument("log345",stringObjectMap);
+
                }
             }catch (Exception e){
                 e.printStackTrace();

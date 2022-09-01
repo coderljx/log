@@ -16,7 +16,6 @@ import java.lang.reflect.Proxy;
 import java.util.Date;
 import java.util.Map;
 
-@Component
 @Data
 public class ESproperties {
     private final Logger mylog = LoggerFactory.getLogger(ESproperties.class);
@@ -53,7 +52,7 @@ public class ESproperties {
         }
         memberValues.remove("indexName");
         memberValues.put("indexName",Name[0]);
-        mylog.info((String) memberValues.get("indexName"));
+       // mylog.info((String) memberValues.get("indexName"));
     }
 
 

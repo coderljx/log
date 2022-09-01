@@ -1,0 +1,43 @@
+{
+  "properties": {
+    "appid" : {
+      "type": "text"
+    },
+    "appname" : {
+      "type": "text"
+    },
+    "orgid" : {
+      "type": "text"
+    },
+    "level" : {
+      "type": "text"
+    },
+    "eventype" : {
+      "type": "text"
+    },
+    "logmessage" : {
+      "type": "text"
+    },
+    "logdetail" : {
+      "type": "text"
+    },
+    "userid" : {
+      "type": "text"
+    },
+    "recorddate" : {
+      "type": "date"
+    },
+    "createby" : {
+      "type": "text"
+    },
+    "createdate" : {
+      "type": "date"
+    },
+    "ipaddress" : {
+      "type": "ip"
+    },
+    "identity" : {
+      "type": "text"
+    }
+  }
+}
