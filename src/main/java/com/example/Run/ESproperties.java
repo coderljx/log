@@ -13,71 +13,131 @@ import org.springframework.stereotype.Component;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
-import java.util.Date;
-import java.util.Map;
+import java.sql.Timestamp;
+import java.text.ParseException;
+import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
 
 @Data
-public class ESproperties {
+@Component
+public class ESproperties  {
     private final Logger mylog = LoggerFactory.getLogger(ESproperties.class);
 
-    @Scheduled(cron = "${spring.es.sche}")
-    public void koko () throws Exception {
-        this.Update(Log.class);
-        this.Update(comptroller.class);
+    /**
+     * 查询时使用，根据传入的时间解析出对应的时间，解析成对应的索引库名称
+     * @param oldName 2022-07-10 00:00:00
+     * @return 返回时间的年月日格式  202207
+     */
+    public String IndexName(String oldName) {
+        String[] NewName = oldName.split(" ");
+        String res = NewName[0].replaceAll("-","");
+        return res.substring(0,6);
     }
 
-
     /**
-     * 自动更新更新索引的 indexName属性，
-     * @param cls cls必须有 @Document 注解，否则报错
-     * @throws Exception
+     * 写入数据时使用，根据当前时间生成索引名称
+     *
+     * @param PreIndex 索引名称的前缀，例如：log，sj
+     * @return log202209
      */
-    public void Update(Class<?> cls,String... Name) throws Exception {
-        // 检查当前的cls是否包含这个注解，不包含报错
-        if (!cls.isAnnotationPresent(Document.class)) {
-            mylog.info("yesyesyeysyesyey");
-            throw new RuntimeException("cls 不包含 @Document");
-        }
-        Document annotation =  cls.getAnnotation(Document.class);
-        InvocationHandler invocationHandler = Proxy.getInvocationHandler(annotation);
-        // 获取 AnnotationInvocationHandler 的 memberValues 字段
-        Field hField = invocationHandler.getClass().getDeclaredField("memberValues");
-        // 因为这个字段 private final 修饰，所以要打开权限
-        hField.setAccessible(true);
-        Map memberValues = (Map) hField.get(invocationHandler);
-        String oldName = (String) memberValues.get("indexName");
-        if (Name.length == 0) {
-            Name = new String[1];
-            Name[0] = NewIndexName(oldName);
-        }
-        memberValues.remove("indexName");
-        memberValues.put("indexName",Name[0]);
-       // mylog.info((String) memberValues.get("indexName"));
+    public String currenTime(String PreIndex) throws ParseException  {
+        String time = TimeUtils.ParseDate(new Date(), 3);
+        String res = time.replaceAll("-", "");
+        return PreIndex + res;
     }
 
-
     /**
-     * 更新索引的名称，方便跨越索引进行查询
-     * 根据当前时间来设置
+     * 计算两个时间相差的月份, 返回他们直接间隔的每一个月，用以查询es索引库
+     * @param time1 2022-01-01 00:00:00
+     * @param time2 2022-02-01 00:00:00
+     * @return 202201,202202
      */
-    private String NewIndexName(String oldName) throws Exception {
-        String substring = "";
-        if (oldName.contains("-")){
-            int i = oldName.indexOf("-");
-            substring = oldName.substring(0,i);
+    public List<String> suxMonth (String time1,String time2) throws ParseException  {
+        Calendar starTime = Calendar.getInstance();
+        starTime.setTime(TimeUtils.ParseDate(time1));
+        Calendar endTime = Calendar.getInstance();
+        endTime.setTime(TimeUtils.ParseDate(time2));
+
+        int startYear =  starTime.get(Calendar.YEAR);
+        int endYear =  endTime.get(Calendar.YEAR);
+        List<String> mount = new ArrayList<>();
+        // 如果查询开始时间和结束时间是同一个年份
+        if (startYear == endYear) {
+            int startMonth = starTime.get(Calendar.MONTH);
+            int endMonth = endTime.get(Calendar.MONTH);
+            // 如果是同一个月份
+            if (startMonth == endMonth) {
+                mount.add(IndexNameFromYearAndMonth(startYear,startMonth));
+                return mount;
+            }
+            mount.add(IndexNameFromYearAndMonth(startYear,startMonth));
+            for (int i = 0; i < endMonth - startMonth; i ++) {
+                starTime.add(Calendar.MONTH , 1);
+                int startMonthAdd = starTime.get(Calendar.MONTH);
+                if (startMonthAdd != endMonth)  mount.add(IndexNameFromYearAndMonth(startYear,startMonthAdd));
+            }
+            mount.add(IndexNameFromYearAndMonth(endYear,endMonth));
         }else {
-            substring = oldName;
+            mount.addAll(suxYear(starTime, endTime));
         }
-        return substring + "-" +  TimeUtils.ParseDate(new Date(),2);
+
+        return mount;
     }
 
     /**
-     * 根据年月来设置对应的索引名称
-     * @param year 对应的年份
-     * @param month 对应的月份
+     * 如果查询时间是跨越年份的
+     * @param starTime
+     * @param endTime
      */
-    public void NewNameFromYM(String year,String month){
+    private List<String> suxYear(Calendar starTime,Calendar endTime) throws ParseException {
+        int startYear =  starTime.get(Calendar.YEAR);
+        int endYear =  endTime.get(Calendar.YEAR);
+        int startMonth = starTime.get(Calendar.MONTH);
+        int endMonth = endTime.get(Calendar.MONTH);
+        List<String> mount = new ArrayList<>();
+        for (int i = 1; i <= endYear - startYear; i++) {
+            int startMonthEnd = 11 - startMonth;
+            for (int h = 0; h < startMonthEnd + 1; h++) {
+                mount.add(IndexNameFromYearAndMonth(startYear,startMonth + h ));
+            }
+            starTime.add(Calendar.YEAR,1);
+            int startYearAdd = starTime.get(Calendar.YEAR);
+            String startYearAddStartMount = startYearAdd + "-01-01 00:00:00";
+            if (startYearAdd != endYear) {
+                Calendar starTimeCurr = Calendar.getInstance();
+                starTimeCurr.clear();
+                starTimeCurr.set(Calendar.YEAR,startYearAdd);
+                starTimeCurr.roll(Calendar.DAY_OF_YEAR,-1);
+                String startYearAddEndMount = TimeUtils.ParseDate(starTimeCurr.getTime());
+                List<String> list = this.suxMonth(startYearAddStartMount, startYearAddEndMount);
+                mount.addAll(list);
+            }else {
+                List<String> list = this.suxMonth(startYearAddStartMount, TimeUtils.ParseDate(endTime.getTime()));
+                mount.addAll(list);
+            }
 
+        }
+        return mount;
+    }
+
+    /**
+     * 根据年月生成对应的索引名称
+     * @param year  2022
+     * @param month 1
+     * @return  202201
+     */
+    public String IndexNameFromYearAndMonth(int year,int month){
+        month += 1;
+        String NewMonth = "";
+        if (month < 10) {
+            NewMonth = "0" + month;
+        }else {
+            NewMonth = "" + month;
+        }
+        return year + NewMonth;
     }
 
 

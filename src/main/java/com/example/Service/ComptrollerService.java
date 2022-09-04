@@ -4,148 +4,149 @@ import com.example.Dao.comptrollerDao;
 import com.example.Pojo.Model;
 import com.example.Pojo.comptroller;
 import com.example.Pojo.comptrollerReturn;
+import com.example.Run.ES;
+import com.example.Run.ESproperties;
 import com.example.Run.EsTemplate;
 import com.example.Utils.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import javax.validation.Valid;
+import java.text.ParseException;
+import java.util.*;
+import java.util.concurrent.ExecutorService;
 
 @Component
 public class ComptrollerService {
     private final Logger mylog = LoggerFactory.getLogger(ComptrollerService.class);
     private final com.example.Dao.comptrollerDao comptrollerDao;
-    private final com.example.ES.comptrollerES comptrollerES;
     private final EsTemplate esTemplate;
+    private final ExecutorService executorService;
+    private final ESproperties eSproperties;
+
+    @Value("${es.per.sj}")
+    private String index;
 
     @Autowired
     public ComptrollerService(comptrollerDao comptrollerDao,
-                              com.example.ES.comptrollerES comptrollerES,
-                              EsTemplate esTemplate) {
+                              EsTemplate esTemplate,
+                              ExecutorService executorService,
+                              ESproperties eSproperties) {
         this.comptrollerDao = comptrollerDao;
-        this.comptrollerES = comptrollerES;
         this.esTemplate = esTemplate;
+        this.executorService = executorService;
+        this.eSproperties = eSproperties;
     }
-
 
     /**
      * 向数据库和es中写入数据
+     *
      * @param comptroller
      * @return
      */
     public boolean Insertsj(comptroller comptroller) {
         if (comptroller == null)
-            return  false;
+            return false;
 
         try {
-            synchronized (this){
-                Integer integer = this.comptrollerDao.InsertSJ(comptroller);
-                com.example.Pojo.comptroller comptroller1 = this.comptrollerDao.SelectByid(this.comptrollerDao.SelectMaxid());
-                this.comptrollerES.save(comptroller1);
-                return true;
-            }
+//                Integer integer = this.comptrollerDao.InsertSJ(comptroller);
+//                com.example.Pojo.comptroller comptroller1 = this.comptrollerDao.SelectByid(this.comptrollerDao.SelectMaxid());
+//                this.comptrollerES.save(comptroller1);
+            comptroller.setId(new Date().getTime());
+            esTemplate.InsertDocument(eSproperties.currenTime(index), comptroller);
+            return true;
         } catch (Exception e) {
             e.printStackTrace();
             return false;
         }
     }
 
-    public Response<List<comptrollerReturn>> findall(int size,int page) throws Exception {
+    public Response<Map<String,Object>> findall(int size, int page,SearchArgs.Order order  , String indexName) throws java.text.ParseException, java.lang.IllegalAccessException  {
         PageRequest request = PageRequest.of(size, page);
-        SearchHits<comptroller> searchHits = this.esTemplate.SearchAll(request, comptroller.class);
-        return  this.Parse(searchHits);
+        SearchHits<comptroller> searchHits = this.esTemplate.SearchAll(request, comptroller.class, order, indexName);
+        return new Response<>(this.Parse(searchHits));
     }
 
-    public Response<List<comptrollerReturn>> SearchMutilLog(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int per_page, int curr_page) throws Exception {
+    public Response<Map<String,Object>> SearchMutilLog(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int per_page, int curr_page)
+            throws ParseException, IllegalAccessException ,ExceptionInInitializerError {
+        String indexName = eSproperties.currenTime(index);
         if (argsItem.getType() == null && argsItem.getChildren() == null) {
-            Response<List<comptrollerReturn>> findall = this.findall(curr_page, per_page);
-            return findall;
+            return new Response<>(this.findall(curr_page, per_page, order, indexName).getData());
         }
-
         List<SearchArgs.Condition> children = argsItem.getChildren();
+        String[] times = new String[2];  // 拿到开始时间和结束时间，用来查询索引库
         for (SearchArgs.Condition child : children) {
-            if (child.getField().equals("moudel") && child.operator.equals("in")){
-                if (child.getValues().get(0).equals("")){
+            // 如果本次查询设计到时间查询
+            if (child.getOperator().equals("ge") || child.getOperator().equals("le")) {
+                if (child.getOperator().equals("ge")) times[0] = child.getValue();
+
+                if (child.getOperator().equals("le")) times[1] = child.getValue();
+            }
+            if (child.getField().equals("moudel") && child.operator.equals("in")) {
+                if (child.getValues().get(0).equals("")) {
                     List<String> list = this.comptrollerDao.GetMoudel();
                     child.setValues(list);
                 }
             }
         }
-        SearchHits<comptroller> searchHits = this.esTemplate.SearchLikeMutil3(argsItem, order, per_page, curr_page, comptroller.class);
-        Response<List<comptrollerReturn>> parse = this.Parse(searchHits);
-        return parse;
+        // 如果开始时间和结束时间都有，则进行解析出所有的索引
+        if (times[0] != null && times[1] != null) {
+            List<String> mounth = eSproperties.suxMonth(times[0], times[1]);
+            return new Response<>(this.SearchMulti(argsItem, order, per_page, curr_page, mounth));
+        }
+        SearchHits<comptroller> searchHits = this.esTemplate.SearchLikeMutil4(argsItem, order, per_page, curr_page, comptroller.class, indexName);
+        Map<String, Object> parse = this.Parse(searchHits);
+        return new Response<>(parse);
     }
 
-    public Response<List<comptrollerReturn>> searchEsLike (String filed, List<String> value, String rule, int page, int size) throws Exception {
-        if (!filed.equals("recorddate")){
-            SearchHits<comptroller> searchHits = esTemplate.SearchLike(filed, value.get(0), size,page,comptroller.class);
-            Response<List<comptrollerReturn>> parse = this.Parse(searchHits);
-            return parse;
-        }
+    /**
+     * 查询设计到时间，并且跨越多个索引库
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String,Object> SearchMulti(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int per_page, int curr_page, List<String> indexName)
+            throws ExceptionInInitializerError, ParseException, IllegalAccessException {
+        List<SearchHits<comptroller>> lists = new ArrayList<>();
+        Map<String,Object> reslist = new HashMap<>();
+//        indexName.forEach(item -> executorService.execute(() -> {
+//            System.out.println(Thread.currentThread().getName());
+//            try {
+//                lists.add(this.esTemplate.SearchLikeMutil4(argsItem, order, per_page, curr_page, comptroller.class, index + item));
+//            } catch (ParseException e) {
+//                e.printStackTrace();
+//            }
+//        }));
 
-        long start = 0L;
-        long end = 0L;
-        if (value.size() == 1) {
-            start = TimeUtils.Parselong(value.get(0));
+        indexName.forEach(item -> {
+            System.out.println(item);
+            try {
+                lists.add(this.esTemplate.SearchLikeMutil4(argsItem, order, per_page, curr_page, comptroller.class, index + item));
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
+        });
+        int total = 0;
+        List<comptrollerReturn> data = new ArrayList<>();
+        for (SearchHits<comptroller> list : lists) {
+            Map<String, Object> parse = this.Parse(list);
+            total += (int) parse.get("total");
+            for (comptrollerReturn comptrollerReturn : (List<comptrollerReturn>) parse.get("data")) {
+                data.add(comptrollerReturn);
+            }
         }
-        if (value.size() > 1){
-           start = TimeUtils.Parselong(value.get(0));
-           end = TimeUtils.Parselong(value.get(1));
-        }
-        SearchHits<comptroller> searchHits = esTemplate.SearchRange(filed, start, end, rule, size, page, comptroller.class);
-        Response<List<comptrollerReturn>> parse = this.Parse(searchHits);
-        return parse;
+        reslist.put("total",total);
+        reslist.put("data", data);
+        return reslist;
     }
 
-    public Response searchEsLikeMutile(Map<String,Object> maps, int size,int page) throws Exception {
-        SearchHits<comptroller> searchHits = esTemplate.SearchLikeMutil2(maps, size,page, comptroller.class);
-        return this.Parse(searchHits);
-    }
+    private Map<String,Object> Parse(SearchHits<comptroller> searchHits) throws ParseException, IllegalAccessException {
+        if (searchHits == null) return null;
 
-    public Response SearchTerm(String filed, List<String> value, String rule,int size, int page) throws Exception {
-        List<comptroller> logs = null;
-        int num = value.size();
-        if (num == 1){
-            String key = Maputil.ReplaceAddKeyword(filed);
-            SearchHits<comptroller> searchHits = esTemplate.SearchTerm(key, value.get(0), size, page, comptroller.class);
-            return this.Parse(searchHits);
-        }
-
-        long parselong = 0L;
-        long parselongend = 0L;
-        Response<List<comptroller>> result;
-        if (num == 2) {
-            parselong = TimeUtils.Parselong(value.get(0));
-            parselongend = TimeUtils.Parselong(value.get(1));
-        }
-        PageRequest of = PageRequest.of(size,page);
-        if (filed.equals("recorddate")){
-            if (rule.equals("="))
-                logs = this.comptrollerES.findByRecorddate(parselong,of);
-
-            if (rule.equals(">=") || rule.equals(">"))
-                logs = this.comptrollerES.findByRecorddateAfter(parselong,of);
-
-            if (rule.equals("<=") || rule.equals("<") )
-                logs = this.comptrollerES.findByRecorddateBefore(parselong,of);
-
-            if (parselongend != 0L)
-                logs = this.comptrollerES.findByRecorddateBetween(parselong,parselongend ,of);
-        }
-        result = new Response<>(logs);
-        return result;
-    }
-
-
-    private Response<List<comptrollerReturn>> Parse(SearchHits<comptroller> searchHits) throws Exception {
         List<SearchHit<comptroller>> searchHits1 = searchHits.getSearchHits();
         long totalHits = searchHits.getTotalHits();
         List<comptrollerReturn> datas = new ArrayList<>();
@@ -157,10 +158,11 @@ public class ComptrollerService {
             comptroller.setRecorddate(newdate);
             datas.add(comptroller);
         }
-        return new Response<>(datas, Math.toIntExact(totalHits));
+        Map<String,Object> res = new HashMap<>();
+        res.put("data",datas);
+        res.put("total",Math.toIntExact(totalHits));
+        return res;
     }
-
-
 
 
     public List<Model> GetModel() throws Exception {
@@ -177,10 +179,10 @@ public class ComptrollerService {
         List<Model.label> labelList = new ArrayList<>();
         for (String s : list) {
             Model.label label = new Model.label();
-            if (s.equals("全部")){
+            if (s.equals("全部")) {
                 label.setLabel(s);
                 label.setValue("");
-            }else {
+            } else {
                 label.setLabel(s);
                 label.setValue(s);
             }
@@ -192,11 +194,6 @@ public class ComptrollerService {
         modelList.add(model);
         return modelList;
     }
-
-
-
-
-
 
 
 }

@@ -12,25 +12,29 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.data.elasticsearch.repository.config.EnableElasticsearchRepositories;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 @SpringBootApplication(scanBasePackages = "com")
 @MapperScan("com.example.Dao")
 @ServletComponentScan("com.example.Run")
-@EnableElasticsearchRepositories (basePackages = "com.example.ES")
-@EnableScheduling
 public class Log2Application {
 
-    @Value("${redis.host}")
-    private String host;
-    
+//    @Bean
+//    public RestHighLevelClient restHighLevelClient(){
+//        RestHighLevelClient client = new RestHighLevelClient(
+//                RestClient.builder(
+////                        new HttpHost("10.0.0.183",9200)
+//                        new HttpHost(host,9200)
+//                )
+//        );
+//        return client;
+//    }
+
     @Bean
-    public RestHighLevelClient restHighLevelClient(){
-        RestHighLevelClient client = new RestHighLevelClient(
-                RestClient.builder(
-//                        new HttpHost("10.0.0.183",9200)
-                        new HttpHost(host,9200)
-                )
-        );
-        return client;
+    public ExecutorService ExecutorService () {
+        ExecutorService executorService = Executors.newFixedThreadPool(30);
+        return executorService;
     }
 
     public static void main(String[] args) {

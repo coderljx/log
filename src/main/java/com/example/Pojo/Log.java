@@ -26,7 +26,7 @@ import java.util.Date;
  */
 
 @Data
-@Document (indexName = "log")
+@Document (indexName = "log",createIndex = false)
 public class Log implements Serializable {
     @Id
     @Mapping
@@ -40,34 +40,34 @@ public class Log implements Serializable {
      * ik_max_word : 最大力度分词
      * ik_smart : 最小力度分词
      */
-//    @Field (type= FieldType.Text)
+    @Field (type= FieldType.Text)
     @Mapping
     private String appid;
 
     @Mapping
     private String appname;
 
-    //    @Field (type= FieldType.Text)
+    @Field (type= FieldType.Text)
     @Mapping
     private String orgid;
 
-    //    @Field (type= FieldType.Text)
+    @Field (type= FieldType.Text)
     @Mapping
     private String level;
 
-    //    @Field (type= FieldType.Text)
+    @Field (type= FieldType.Text)
     @Mapping
     private String eventype;
 
-    //    @Field (type= FieldType.Text, analyzer = "ik_max_word")
+    @Field (type= FieldType.Text)
     @Mapping
     private String logmessage;
 
-    //    @Field (type= FieldType.Text, analyzer = "ik_max_word")
+    @Field (type= FieldType.Text)
     @Mapping
     private String logdetail;
 
-    //    @Field (type= FieldType.Text)
+    @Field (type= FieldType.Text)
     @Mapping
     private String userid;
 
@@ -75,7 +75,7 @@ public class Log implements Serializable {
     @Mapping
     private Date recorddate;
 
-    //    @Field (type= FieldType.Text)
+    @Field (type= FieldType.Text)
     @Mapping
     private String createby;
 

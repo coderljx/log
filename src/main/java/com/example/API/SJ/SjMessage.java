@@ -57,5 +57,7 @@ public class SjMessage {
    private String ipaddress;
    @NotNull
    private String createby;
+   @NotNull
+   private String status;
 
 }

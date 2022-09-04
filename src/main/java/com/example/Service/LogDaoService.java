@@ -2,11 +2,11 @@ package com.example.Service;
 
 
 import com.example.Dao.LogDao;
-import com.example.ES.LogES;
 import com.example.Pojo.Log;
 import com.example.Pojo.LogReturn;
 import com.example.Pojo.Model;
-import com.example.Run.ES;
+import com.example.Pojo.comptroller;
+import com.example.Run.ESproperties;
 import com.example.Run.Email;
 import com.example.Run.EmailProperties;
 import com.example.Run.EsTemplate;
@@ -14,38 +14,44 @@ import com.example.Utils.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.stereotype.Service;
 
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
 
 @Service
 public class LogDaoService {
     private final Logger mylog = LoggerFactory.getLogger(LogDaoService.class);
     private final LogDao logDevelopDao;
     private final EsTemplate esTemplate;
-    private final ES es;
-    private final LogES logES;
     private final Email email;
     private final EmailProperties emailProperties;
+    private final ESproperties eSproperties;
+    private final ExecutorService executorService;
     private final String[] values = new String[]{"全部","正常","轻微","一般","严重","非常严重"};
+
+    @Value("${es.per.log}")
+    private  String index;
 
     @Autowired(required = false)
     public LogDaoService(LogDao logDevelopDao,
                          EsTemplate esTemplate,
                          EmailProperties emailProperties,
-                         LogES logES,
-                         ES es,
+                         ESproperties eSproperties,
+                         ExecutorService executorService,
                          Email email){
         this.logDevelopDao = logDevelopDao;
         this.esTemplate = esTemplate;
         this.emailProperties = emailProperties;
-        this.logES = logES;
+        this.eSproperties = eSproperties;
+        this.executorService = executorService;
         this.email = email;
-        this.es = es;
     }
 
 
@@ -60,9 +66,7 @@ public class LogDaoService {
                    //this.logDevelopDao.Insertlog(logOperation);
                    //Log logOperation1 = this.logDevelopDao.SelectByid(this.logDevelopDao.Maxid());
                   // this.logES.save(logOperation);
-                   Map<String, Object> stringObjectMap = Maputil.ObjectToMap(logOperation);
-                   es.AddDocument("log345",stringObjectMap);
-
+                   esTemplate.InsertDocument(eSproperties.currenTime(index),logOperation);
                }
             }catch (Exception e){
                 e.printStackTrace();
@@ -70,68 +74,12 @@ public class LogDaoService {
         }
     }
 
-    public Response<List<LogReturn>>findall(PageRequest request) throws Exception {
-        SearchHits<Log> searchHits = this.esTemplate.SearchAll(request, Log.class);
-        return this.Parse(searchHits);
+    public Response<Map<String,Object>> findall(PageRequest request, SearchArgs.Order order,String indexName) throws Exception {
+        SearchHits<Log> searchHits = this.esTemplate.SearchAll(request, Log.class,order,indexName);
+        Map<String, Object> parse = this.Parse(searchHits);
+        return new Response<>(parse);
     }
 
-    public Response<List<LogReturn>> SearchTrem(String filed,  String rule , int size,int page,List<String> value) throws Exception {
-        int num = value.size();
-        if (num > 2) return null;
-
-        if (!filed.equals("recorddate"))
-        {
-            if (num == 1){
-                String Newfiled = Maputil.ReplaceAddKeyword(filed);
-                String values = value.get(0);
-                return this.Parse(this.esTemplate.SearchTerm(Newfiled, values, size, page, Log.class));
-            }
-        }
-
-        long parselong = 0L;
-        long parselongend = 0L;
-        if (num == 1) {
-            parselong = TimeUtils.Parselong(value.get(0));
-        }
-        if (num == 2) {
-            parselong = TimeUtils.Parselong(value.get(0));
-            parselongend = TimeUtils.Parselong(value.get(1));
-        }
-        PageRequest of = PageRequest.of(0, size);
-        List<Log> logs = new ArrayList<>();
-
-        SearchHits<Log> searchHits = this.esTemplate.SearchRange(filed, parselong, parselongend, rule, size, page, Log.class);
-        Response<List<LogReturn>> parse = this.Parse(searchHits);
-        return parse;
-    }
-
-    public Response<List<LogReturn>> Searchlike(String filed, String rule, int size,int page,List<String> value) throws Exception {
-        String values = "";
-        int num = value.size();
-        if (num == 1) {
-            values = value.get(0);
-            SearchHits searchHits = this.esTemplate.SearchLike(filed, values, size,page, Log.class);
-            return this.Parse(searchHits);
-        }
- 
-        long parselong = 0L;
-        long parselongend = 0L;
-        if (num == 2) {
-            parselong = TimeUtils.Parselong(value.get(0));
-            parselongend = TimeUtils.Parselong(value.get(1));
-        }
-        if (filed.equals("recorddate")) {
-            SearchHits<Log> searchHits = this.esTemplate.SearchRange(filed, parselong, parselongend, rule, size, page, Log.class);
-            Response<List<LogReturn>> parse = this.Parse(searchHits);
-            return parse;
-        }
-        return new Response<>(null);
-    }
-
-    public Response<List<LogReturn>> SearchlikeMutil(Map<String,Object> maps, int size,int page) throws Exception {
-        SearchHits<Log> searchHits = this.esTemplate.SearchLikeMutil2(maps, size, page,Log.class);
-        return this.Parse(searchHits);
-    }
 
     /**
      * 发送邮件
@@ -153,16 +101,24 @@ public class LogDaoService {
 
 
 
-    public Response<List<LogReturn>> SearchMutilLog(SearchArgs.ArgsItem argsItem,SearchArgs.Order order,int per_page,int curr_page) throws Exception {
+    public Response<Map<String,Object>> SearchMutilLog(SearchArgs.ArgsItem argsItem,SearchArgs.Order order,int per_page,int curr_page) throws Exception {
         // 查询所有数据
+        String indexName = eSproperties.currenTime(index);
         if (argsItem.getType() == null && argsItem.getChildren() == null){
             PageRequest of = PageRequest.of(curr_page, per_page);
-            Response<List<LogReturn>> findall = this.findall(of);
+            Response<Map<String, Object>> findall = this.findall(of,order,indexName);
             return findall;
         }
 
         List<SearchArgs.Condition> children = argsItem.getChildren();
+        String[] times = new String[2];  // 拿到开始时间和结束时间，用来查询索引库
         for (SearchArgs.Condition child : children) {
+            // 如果本次查询设计到时间查询
+            if (child.getOperator().equals("ge") || child.getOperator().equals("le")) {
+                if (child.getOperator().equals("ge")) times[0] = child.getValue();
+
+                if (child.getOperator().equals("le")) times[1] = child.getValue();
+            }
             // 如果前端传入的是""， 表示查询所有
             if (child.getField().equals("level") && child.getOperator().equals("in")){
                 if (child.getValues().get(0).equals("")){
@@ -171,12 +127,41 @@ public class LogDaoService {
                     child.setValues(list);
                 }
             }
+
         }
-        SearchHits<Log> searchHits = this.esTemplate.SearchLikeMutil3(argsItem, order, per_page, curr_page, Log.class);
-        return this.Parse(searchHits);
+        if (times[0] != null && times[1] != null) {
+            List<String> mounth = eSproperties.suxMonth(times[0], times[1]);
+            return new Response<>(this.SearchMulti(argsItem, order, per_page, curr_page, mounth));
+        }
+        SearchHits<Log> searchHits = this.esTemplate.SearchLikeMutil4(argsItem, order, per_page, curr_page, Log.class,indexName );
+        return new Response<>(this.Parse(searchHits));
     }
 
-    public void NewResturn(SearchArgs.ArgsItem argsItem,SearchArgs.Order order,int per_page,int curr_page){
+    /**
+     * 查询设计到时间，并且跨越多个索引库
+     */
+    private Map<String,Object> SearchMulti(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int per_page, int curr_page, List<String> indexName)
+            throws ExceptionInInitializerError, Exception {
+        List<SearchHits<Log>> lists = new ArrayList<>();
+        Map<String,Object> reslist = new HashMap<>();
+        indexName.forEach(item -> {
+            executorService.execute(() -> {
+                System.out.println(Thread.currentThread().getName());
+                try {
+                    lists.add(this.esTemplate.SearchLikeMutil4(argsItem, order, per_page, curr_page, Log.class, index + item));
+                } catch (ParseException e) {
+                    e.printStackTrace();
+                }
+            });
+        });
+
+        int total = 0;
+        for (SearchHits<Log> list : lists) {
+            Map<String, Object> parse = this.Parse(list);
+            total += (int) parse.get("total");
+            reslist.put("data",parse.get("data"));
+        }
+        return reslist;
     }
 
 
@@ -186,7 +171,7 @@ public class LogDaoService {
      * @return
      * @throws Exception
      */
-    private Response<List<LogReturn>> Parse(SearchHits<Log> searchHits) throws Exception {
+    private Map<String,Object> Parse(SearchHits<Log> searchHits) throws Exception {
         List<SearchHit<Log>> searchHits1 = searchHits.getSearchHits();
         long totalHits = searchHits.getTotalHits();
         List<LogReturn> datas = new ArrayList<>();
@@ -198,7 +183,10 @@ public class LogDaoService {
             logReturn.setRecorddate(newdate);
             datas.add(logReturn);
         }
-        return new Response<>(datas, Math.toIntExact(totalHits));
+        Map<String,Object> res = new HashMap<>();
+        res.put("data",datas);
+        res.put("total",Math.toIntExact(totalHits));
+        return res;
     }
 
     /**

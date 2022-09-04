@@ -3,6 +3,8 @@ package com.example.Run;
 import com.example.Utils.Maputil;
 import com.example.Utils.SearchArgs;
 import com.example.Utils.TimeUtils;
+import org.apache.poi.ss.formula.functions.T;
+import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.index.query.*;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -18,8 +20,11 @@ import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilde
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
+import javax.management.RuntimeErrorException;
 import java.lang.reflect.Field;
+import java.sql.Timestamp;
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -30,96 +35,33 @@ public class EsTemplate {
     private  ElasticsearchRestTemplate elasticsearchRestTemplate;
 
     /**
-     * 检查索引是否存在,不存在创建索引
+     * 根据索引名称，判断当前索引是否存在
+     * @param IndexName
+     * @return
+     */
+    public boolean ExistsIndexName(String IndexName) {
+        IndexOperations indexOperations = elasticsearchRestTemplate.indexOps(IndexCoordinates.of(IndexName));
+
+        return indexOperations.exists();
+    }
+    
+    
+    /**
+     * 指定向某一个索引中写入数据
      * @param cls
+     * @param IndexName
      * @param <T>
      * @return
      */
-    public <T> boolean IndexExists(Class<T> cls){
-        IndexOperations indexOperations = elasticsearchRestTemplate.indexOps(cls);
-        Document mapping = indexOperations.createMapping(cls);
-
-        IndexCoordinates log = IndexCoordinates.of("log");
-        elasticsearchRestTemplate.index(new IndexQuery(),log);
-
-        if (indexOperations.exists() ){
-             return true;
-         }
-        return indexOperations.create();
+    public <T> boolean InsertDocument(String IndexName,T cls){
+        elasticsearchRestTemplate.save(cls,IndexCoordinates.of(IndexName));
+        return false;
     }
-
-
-    /**
-     * 精确查询, 单条件
-     * @param key 查询的key
-     * @param value 查询的value
-     * @param cls 返回的类，该类是index，要存在索引
-     */
-    public <T> SearchHits<T> SearchTerm(String key, String value, int size,int page ,Class<T> cls){
-        NativeSearchQuery build = new NativeSearchQueryBuilder()
-                .withQuery(new TermQueryBuilder(key, value))  //总的查询
-                .withPageable(PageRequest.of(page,size)) // 设置分页
-                .build();//设置bool查
-
-        return elasticsearchRestTemplate.search(build,cls);
-    }
-
-    /**
-     * 多字段精确查询，一个key对应多个value， 单条件
-     */
-    public <T> SearchHits<T> SearchTerms(String key, int size ,Class<T> cls,String... value){
-        NativeSearchQuery build = new NativeSearchQueryBuilder()
-                .withQuery(new TermsQueryBuilder(key,value))  //总的查询
-                .withPageable(Pageable.ofSize(size))
-                .build();//设置bool查
-
-        return elasticsearchRestTemplate.search(build,cls);
-    }
-
-    /**
-     * 模糊查询， 单条件
-     */
-    public <T> SearchHits<T> SearchLike(String key, String value,int size , int page, Class<T> cls){
-        NativeSearchQuery build = new NativeSearchQueryBuilder()
-                .withQuery(new MatchPhraseQueryBuilder(key,value))
-                .withPageable(PageRequest.of(page,size))
-                .build();
-        return elasticsearchRestTemplate.search(build,cls);
-    }
-
-
-    /**
-     * 多条件模糊查询
-     * @param maps 查询的字段以及对应的值
-     */
-    public <T> SearchHits<T> SearchLikeMutil2(Map<String,Object> maps ,int size,int page, Class<T> cls){
-        BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
-        String[] Keys = Maputil.GetMapKey(maps);
-        RangeQueryBuilder rangeQueryBuilder;
-        for (String key : Keys) {
-            if (key.equals("recorddate")){
-                rangeQueryBuilder = new RangeQueryBuilder(key);
-                String o = (String) maps.get(key);
-                String[] split = o.split("#");
-                rangeQueryBuilder.gte(split[0]);
-                rangeQueryBuilder.lte(split[1]);
-                boolQueryBuilder.must(rangeQueryBuilder);
-                continue;
-            }
-            boolQueryBuilder.must(new MatchQueryBuilder(key,maps.get(key)));
-        }
-        NativeSearchQuery build = new NativeSearchQueryBuilder()
-                .withQuery(boolQueryBuilder)
-                .withPageable(PageRequest.of(page,size))
-                .build();
-        return elasticsearchRestTemplate.search(build,cls);
-    }
-
 
     /**
      * 多条件模糊查询
      */
-    public <T> SearchHits<T> SearchLikeMutil3(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int size, int page, Class<T> cls) throws ParseException {
+    public <T> SearchHits<T> SearchLikeMutil3(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int size, int page, Class<T> cls,String... IndexName) throws ParseException {
         BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
         String[] time = new String[2];
         List<SearchArgs.Condition> children = argsItem.getChildren();
@@ -180,7 +122,7 @@ public class EsTemplate {
                 .withPageable(PageRequest.of(page,size))
                 .withSort(Sort.by(sor,order.getField()))
                 .build();
-        return elasticsearchRestTemplate.search(build,cls);
+        return elasticsearchRestTemplate.search(build,cls,IndexCoordinates.of(IndexName[0]));
     }
 
 
@@ -189,60 +131,132 @@ public class EsTemplate {
      * 查询所有内容
      * @param cls 查询那个index
      */
-    public <T> SearchHits<T> SearchAll(PageRequest request,Class<T> cls){
-        Field[] declaredFields = cls.getDeclaredFields();
-        String filed = null;
-        for (Field declaredField : declaredFields) {
-            declaredField.setAccessible(true);
-            if (declaredField.getName().equals("recorddate")){
-                filed = declaredField.getName();
-            }
+    public <T> SearchHits<T> SearchAll(PageRequest request, Class<T> cls, SearchArgs.Order order, String... IndexName){
+
+        if (!this.ExistsIndexName(IndexName[0])){
+            throw new RuntimeException("索引名不存在");
         }
         NativeSearchQuery build = new NativeSearchQueryBuilder()
                 .withQuery(new MatchAllQueryBuilder())
                 .withPageable(request)
-                .withSort(Sort.by(Sort.Direction.DESC,filed))
+                .withSort(Sort.by(order.getField()))
                 .build();
-        return elasticsearchRestTemplate.search(build,cls);
+        return elasticsearchRestTemplate.search(build,cls,IndexCoordinates.of(IndexName[0]));
     }
 
 
     /**
-     * 范围查找
-     * range查询找出那些落在指定区间内的数字或者时间。range 查询允许以下字符
-     * #gt 大于>
-     * #gte 大于等于>=
-     * #lt 小于<
-     * #lte 小于等于<=
+     * 构建时间查询条件
+     * @return
      */
-    public <T,V> SearchHits<T> SearchRange(String filed,V valuewidth, V valuend,String rule , int size ,int page, Class<T> cls){
-        RangeQueryBuilder rangeQueryBuilder = new RangeQueryBuilder(filed);
-        if (rule.equals(">"))
-            rangeQueryBuilder.gt(valuewidth);
+    private RangeQueryBuilder GenRangeQueryBuilder(List<SearchArgs.Condition> children) throws ParseException {
+        RangeQueryBuilder rangeQueryBuilder = null;
+        String[] time = new String[2];
+        for (SearchArgs.Condition child : children) {
+            String filed = child.getField();
+            String operator = child.getOperator();
+            if (operator.equals("ge")) {
+                time[0] = child.getValue();
+                continue;
+            }
+            if (operator.equals("le")){
+                time[1] = child.getValue();
+            }
 
-        if (rule.equals(">="))
-            rangeQueryBuilder.gte(valuewidth);
-
-        if (rule.equals("<"))
-            rangeQueryBuilder.lt(valuend);
-
-        if (rule.equals("<="))
-            rangeQueryBuilder.lte(valuend);
-
-        if (rule.equals("><")){ // 大于开始值，小于结束值
-            rangeQueryBuilder.gte(valuewidth);
-            rangeQueryBuilder.lte(valuend);
+            if (time[0] != null && time[1] != null){
+//                Date start = TimeUtils.ParseTimestamp(time[0]);
+//                Date end = TimeUtils.ParseTimestamp(time[1]);
+                long start = 1662048000000L;
+                long end = 1651161600123L;
+                rangeQueryBuilder = new RangeQueryBuilder(filed);
+                rangeQueryBuilder.gte(start);
+                rangeQueryBuilder.lte(end);
+            }
         }
-        NativeSearchQuery build = new NativeSearchQueryBuilder()
-                .withQuery(rangeQueryBuilder)
-                .withPageable(PageRequest.of(page,size))
-                .build();
-        return elasticsearchRestTemplate.search(build,cls);
+        return rangeQueryBuilder;
+    }
+
+    /**
+     * 构建模糊查询条件
+     * @return
+     */
+    private List<MatchQueryBuilder> GenMatchQueryBuilder(List<SearchArgs.Condition> children) {
+        List<MatchQueryBuilder> matchQueryBuilder = new ArrayList<>();
+        for (SearchArgs.Condition child : children) {
+            String filed = child.getField();
+            String operator = child.getOperator();
+            String value = "";
+            // 如果value有值
+            if (child.getValue() != null) {
+                value = child.getValue();
+                if (value.contains(",")) {
+                    String[] split = value.split(",");
+                    for (String s : split) {
+                        MatchQueryBuilder matchQueryBuilder1 = new MatchQueryBuilder(filed, s);
+                        matchQueryBuilder.add(matchQueryBuilder1);
+                    }
+                }
+                if (operator.contains("=")){
+                    MatchQueryBuilder matchQueryBuilder1 = new MatchQueryBuilder(filed, value);
+                    matchQueryBuilder.add(matchQueryBuilder1);
+                }
+            }
+            //如果用的是多字段查询, 只获取values的值
+            if (child.getValues() != null  && operator.equals("in")){
+                List<String> values = child.getValues();
+                for (String s : values) {
+                    MatchQueryBuilder matchQueryBuilder1 = new MatchQueryBuilder(filed, s);
+                    matchQueryBuilder.add(matchQueryBuilder1);
+                }
+            }
+        }
+        return matchQueryBuilder;
     }
 
 
+    /**
+     * 查询对应的数据
+     * @param argsItem
+     * @param order
+     * @param size
+     * @param page
+     * @param cls
+     * @param IndexName
+     * @param <T>
+     * @return
+     * @throws ParseException
+     */
+    public <T> SearchHits<T> SearchLikeMutil4(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int size, int page, Class<T> cls,String IndexName)
+            throws ParseException, ExceptionInInitializerError {
+        if (!this.ExistsIndexName(IndexName)){
+            throw new ExceptionInInitializerError("索引名不存在");
+        }
+        BoolQueryBuilder boolQueryBuilder = null;
+        List<SearchArgs.Condition> children = argsItem.getChildren();
+        List<MatchQueryBuilder> matchQueryBuilders = this.GenMatchQueryBuilder(children);
+        if (matchQueryBuilders.size() > 0) {
+            boolQueryBuilder = new BoolQueryBuilder();
+            matchQueryBuilders.forEach(boolQueryBuilder::should);
+        }
+        RangeQueryBuilder rangeQueryBuilder = this.GenRangeQueryBuilder(children);
+        if (rangeQueryBuilder != null) {
+            if (boolQueryBuilder == null) boolQueryBuilder = new BoolQueryBuilder();
+            boolQueryBuilder.must(rangeQueryBuilder);
+        }
+        if (boolQueryBuilder == null) return null;
 
-
-
+        Sort.Direction sor;
+        if (order.getOrder_type() == null) {
+            sor = Sort.Direction.DESC;
+        }else {
+            sor = order.getOrder_type().equals("ASC") ? Sort.Direction.ASC : Sort.Direction.DESC;
+        }
+        NativeSearchQuery build = new NativeSearchQueryBuilder()
+                .withQuery(boolQueryBuilder)
+                .withPageable(PageRequest.of(page,size))
+                .withSort(Sort.by(sor,order.getField()))
+                .build();
+        return elasticsearchRestTemplate.search(build,cls,IndexCoordinates.of(IndexName));
+    }
 
 }

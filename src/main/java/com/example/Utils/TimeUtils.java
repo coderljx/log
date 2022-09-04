@@ -54,19 +54,31 @@ public class TimeUtils {
      * 对date 进行格式化，按照 yyyy-MM-dd HH:mm:ss 格式显示
      * @param date
      */
-    public static String ParseDate(Date date) throws Exception{
+    public static String ParseDate(Date date) throws ParseException {
         String time = "yyyy-MM-dd HH:mm:ss";
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat(time);
         return simpleDateFormat.format(date);
     }
 
-    public static String ParseDate(Date date,int type) throws Exception{
+    /**
+     *
+     * @param date
+     * @param type  1 : yyyy-MM-dd HH:mm:ss
+     *              2 : yyyy-MM-dd
+     *              3 : yyyy-MM
+     * @return
+     * @throws Exception
+     */
+    public static String ParseDate(Date date,int type) throws ParseException{
         String time = "yyyy-MM-dd HH:mm:ss";
         String times = "yyyy-MM-dd";
+        String times2 = "yyyy-MM";
         String koko = "";
         if (type == 1) koko = time;
 
         if (type == 2) koko = times;
+
+        if (type == 3) koko = times2;
 
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat(koko);
         return simpleDateFormat.format(date);

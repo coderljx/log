@@ -48,9 +48,9 @@ public class Excel {
         return row.getRowNum();
     }
 
-    private static void createCol(Row row, Object... value) {
+    private static void createCol(Row row, String... value) {
         for (int i = 0; i < value.length; i++) {
-            row.createCell(i).setCellValue((String) value[i]);
+            row.createCell(i).setCellValue(value[i]);
         }
     }
 
@@ -61,12 +61,12 @@ public class Excel {
      */
     public static Workbook CreateHeader(String SheetName,String... headerName) {
         if (SheetName == null || SheetName.equals("")){
-            SheetName = "";
+            SheetName = "sheet1";
         }
         try {
             workbook = createWorkBook();
             createSheet(SheetName);
-            createCol(createRow(0), (Object) headerName);
+            createCol(createRow(0), headerName);
             return workbook;
         } catch (IOException | InvalidFormatException e) {
             e.printStackTrace();
@@ -79,13 +79,11 @@ public class Excel {
      * @param data 写入对数据，因为一行数据不可能只有一列，所以不限制传入的数据长度
      * @return
      */
-    public static Workbook CreateData(String SheetName,String... data){
-        if (workbook == null){
-            workbook = CreateHeader(SheetName);
-        }
+    public static Workbook CreateData( String... data){
+
         Row row = createRow( getRowNum() + 1 );
         for (int i = 0; i < data.length; i++) {
-            createCol(row, (Object) data);
+            createCol(row, data);
         }
         return workbook;
     }

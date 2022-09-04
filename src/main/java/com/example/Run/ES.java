@@ -18,23 +18,23 @@ import org.elasticsearch.action.update.UpdateResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.client.indices.*;
-import org.elasticsearch.cluster.metadata.MappingMetadata;
-import org.elasticsearch.cluster.metadata.Template;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.index.query.*;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.fetch.subphase.FetchSourceContext;
 import org.elasticsearch.xcontent.XContentType;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 
-@Component
+/**
+ * 废弃
+ */
 public class ES {
 
     /**
@@ -79,54 +79,24 @@ public class ES {
         return false;
     }
 
-    public boolean CreateIndex(String index) {
+    /**
+     *  创建一个索引
+     * @param index 索引名称，之后的数据会存在这个索引中
+     * @param mappingName 加载的映射文件，字段等内容的配置
+     * @return
+     */
+    public boolean CreateIndex(String index,String mappingName) {
         if (!index.equals("")) return  false;
 
         try {
             CreateIndexRequest createIndex = new CreateIndexRequest(index);
             createIndex.settings(Settings.builder().put("number_of_shards", "1").put("number_of_replicas", "5"));
+            InputStream resourceAsStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(mappingName);
+            if (resourceAsStream == null) return false;
 
-            createIndex.mapping("\"properties\": {\n" +
-                    "    \"appid\" : {\n" +
-                    "      \"type\": \"text\"\n" +
-                    "    },\n" +
-                    "    \"appname\" : {\n" +
-                    "      \"type\": \"text\"\n" +
-                    "    },\n" +
-                    "    \"orgid\" : {\n" +
-                    "      \"type\": \"text\"\n" +
-                    "    },\n" +
-                    "    \"level\" : {\n" +
-                    "      \"type\": \"text\"\n" +
-                    "    },\n" +
-                    "    \"eventype\" : {\n" +
-                    "      \"type\": \"text\"\n" +
-                    "    },\n" +
-                    "    \"logmessage\" : {\n" +
-                    "      \"type\": \"text\"\n" +
-                    "    },\n" +
-                    "    \"logdetail\" : {\n" +
-                    "      \"type\": \"text\"\n" +
-                    "    },\n" +
-                    "    \"userid\" : {\n" +
-                    "      \"type\": \"text\"\n" +
-                    "    },\n" +
-                    "    \"recorddate\" : {\n" +
-                    "      \"type\": \"date\"\n" +
-                    "    },\n" +
-                    "    \"createby\" : {\n" +
-                    "      \"type\": \"text\"\n" +
-                    "    },\n" +
-                    "    \"createdate\" : {\n" +
-                    "      \"type\": \"date\"\n" +
-                    "    },\n" +
-                    "    \"ipaddress\" : {\n" +
-                    "      \"type\": \"ip\"\n" +
-                    "    },\n" +
-                    "    \"identity\" : {\n" +
-                    "      \"type\": \"text\"\n" +
-                    "    }\n" +
-                    "  }",XContentType.JSON);
+            byte[] bytes = new byte[resourceAsStream.available()];
+            resourceAsStream.read(bytes);
+            createIndex.mapping(new String(bytes) ,XContentType.JSON);
 
             CreateIndexResponse createIndexResponse = restHighLevelClient
                     .indices().create(createIndex, RequestOptions.DEFAULT);
@@ -138,6 +108,11 @@ public class ES {
 
     }
 
+    /**
+     *  根据索引名称，删除一个索引
+     * @param index
+     * @return
+     */
     public boolean DeleteIndex(String index){
         if (index.equals("")) {
             DeleteIndexRequest dele = new DeleteIndexRequest(index);
@@ -153,14 +128,18 @@ public class ES {
         return false;
     }
 
+    /**
+     * 向指定的索引中写入数据
+     * @param index
+     * @param maps
+     * @param <T>
+     * @return
+     */
     public <T> boolean AddDocument(String index, Map<String,T> maps) {
         IndexRequest indexRequest = new IndexRequest(index);
         indexRequest.source(maps);
-        indexRequest.timeout("1s");
+        indexRequest.timeout("2s");
         try {
-            if (!this.IndexIsExists(index)){
-                this.CreateIndex(index);
-            }
             IndexResponse res = restHighLevelClient
                     .index(indexRequest, RequestOptions.DEFAULT);
             return true;
@@ -171,30 +150,23 @@ public class ES {
     }
 
     /**
-     * 添加一个文档，向指定的索引中, 索引不存在则创建
+     * 添加一个文档，向指定的索引中
      * @param index
      * @param sources
      * @param <T>
      * @return
      */
-    public <T> boolean AddDocument(String index, Object... sources) {
-        IndexRequest indexRequest = new IndexRequest(index);
-        indexRequest.source(JSON.toJSONString(sources),XContentType.JSON);
-        indexRequest.id("asdas");
-        indexRequest.timeout("2s");
-        try {
-            if (!this.IndexIsExists(index)){
-                this.CreateIndex(index);
-            }
-            IndexResponse res = restHighLevelClient
-                    .index(indexRequest, RequestOptions.DEFAULT);
-            return true;
-        } catch (IOException e) {
-            e.printStackTrace();
-            return false;
-        }
+    public <T> boolean AddDocument(String index, Object sources) throws IllegalAccessException {
+        Map<String, Object> stringObjectMap = Maputil.ObjectToMap(sources);
+        return this.AddDocument(index,stringObjectMap);
     }
 
+    /**
+     * 判断一个数据再当前的索引中是否存在，根据id查询
+     * @param index
+     * @param id
+     * @return
+     */
     public boolean DocumentExists(String index,String id){
         if (index.equals("") || id.equals(""))
             return false;
@@ -211,6 +183,12 @@ public class ES {
         }
     }
 
+    /**
+     * 获取一个数据的响应结果
+     * @param index
+     * @param id
+     * @return
+     */
     public org.elasticsearch.action.get.GetResponse GetDocument(String index,String id){
         if (index.equals("") || id.equals(""))
             return null;
@@ -228,6 +206,14 @@ public class ES {
         }
     }
 
+    /**
+     * 更新文档
+     * @param index
+     * @param id
+     * @param maps
+     * @param <T>
+     * @return
+     */
     public <T> boolean UpdateDoucment(String index,String id,Map<String,T> maps){
         if (index.equals("") || id.equals(""))
             return false;
@@ -243,6 +229,12 @@ public class ES {
         }
     }
 
+    /**
+     * 删除文档
+     * @param index
+     * @param id
+     * @return
+     */
     public boolean DeleteDocument(String index,String id){
         if (index.equals("") || id.equals(""))
             return false;
@@ -263,39 +255,31 @@ public class ES {
 
     }
 
+    /**
+     * 执行批量写入请求
+     * @param index
+     * @param lists
+     * @param <T>
+     * @return
+     */
     public <T> boolean BulkRequest(String index,List<T> lists){
         BulkRequest bulkRequest = new BulkRequest();
         int Numbers = lists.size();
         if (Numbers <= 0)
             return false;
 
-        if (Numbers < 50)
-            bulkRequest.timeout("1s");
-
-        if (Numbers > 50 && Numbers < 150)
+        if (Numbers < 300)
             bulkRequest.timeout("2s");
 
-        if (Numbers > 150 && Numbers < 300)
-            bulkRequest.timeout("4s");
-
         if (Numbers > 300 && Numbers < 1000)
-            bulkRequest.timeout("10s");
+            bulkRequest.timeout("5s");
 
         if (Numbers > 1000)
-            bulkRequest.timeout("30s");
-
-        if (Numbers > 5000)
-            bulkRequest.timeout("60s");
-
-        if (!this.IndexIsExists(index)){
-            this.CreateIndex(index);
-        }
+            bulkRequest.timeout("8s");
 
         for (T list : lists) {
-            IndexRequest source = new IndexRequest(index);
-            String s = JSON.toJSONString(list);
-            source.source(XContentType.JSON,s);
-            bulkRequest.add(source);
+            bulkRequest.add(new IndexRequest(index)
+                    .source(JSON.toJSONString(list),XContentType.JSON));
         }
         try {
             BulkResponse bulk = restHighLevelClient.bulk(bulkRequest, RequestOptions.DEFAULT);
@@ -342,8 +326,8 @@ public class ES {
      * @param filed es字段
      * @param value 字段对应的值
      */
-    public SearchResponse SearchDocumenttermsQuery(String filed,int from, int size, Object value){
-        SearchRequest searchRequest = new SearchRequest("coco");
+    public SearchResponse SearchDocumenttermsQuery(String index,String filed,int from, int size, Object value){
+        SearchRequest searchRequest = new SearchRequest(index);
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         TermQueryBuilder termsQueryBuilder = QueryBuilders.termQuery(filed, value);
         searchSourceBuilder.query(termsQueryBuilder);
@@ -413,7 +397,7 @@ public class ES {
     }
 
     /**
-     * 模糊查询，匹配 *value*
+     * 通配符查询，匹配 *value*
      */
     public SearchResponse SearchDocumentwildcardQuery(String filed,String value,int from, int size){
         SearchRequest searchRequest = new SearchRequest();

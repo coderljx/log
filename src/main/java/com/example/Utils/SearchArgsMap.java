@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.lang.reflect.Field;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +36,7 @@ public class SearchArgsMap {
      * @return
      * @throws Exception
      */
-    public boolean MapTpArgsItem() throws Exception{
+    public boolean MapTpArgsItem() throws ParseException, NoSuchFieldException, IllegalAccessException {
         if (this.filters == null) return false;
 
         Map<String, Object> filters = this.getFilters();
@@ -95,7 +96,7 @@ public class SearchArgsMap {
     /**
      * 获取Condition，从map中获取
      */
-    private List<SearchArgs.Condition> GetConditionFormMaps (List<Map<String,Object>> content) throws Exception {
+    private List<SearchArgs.Condition> GetConditionFormMaps (List<Map<String,Object>> content) throws ParseException, NoSuchFieldException, IllegalAccessException {
         List<SearchArgs.Condition> list = new ArrayList<>();
         for (Map<String, Object> stringObjectMap : content) {
             SearchArgs.Condition t = new SearchArgs.Condition();

@@ -14,7 +14,7 @@ public class Filter implements WebMvcConfigurer {
         registry.addMapping("/**")
                 //放行哪些原始域
                 .allowedOrigins("*")
-                .allowedMethods(new String[]{"GET", "POST", "PUT", "DELETE","OPTIONS"})
+                .allowedMethods("GET", "POST", "PUT", "DELETE","OPTIONS")
                 .allowedHeaders("*")
                 .exposedHeaders("*");
     }

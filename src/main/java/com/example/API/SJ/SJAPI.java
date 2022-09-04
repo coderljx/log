@@ -1,5 +1,6 @@
 package com.example.API.SJ;
 
+import com.alibaba.fastjson.JSON;
 import com.example.API.Log.LogMessage;
 import com.example.Pojo.Model;
 import com.example.Pojo.comptroller;
@@ -8,16 +9,20 @@ import com.example.Run.Excel;
 import com.example.Run.Rocket;
 import com.example.Service.ComptrollerService;
 import com.example.Utils.*;
+import org.apache.logging.log4j.message.ReusableMessage;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.util.List;
@@ -95,124 +100,14 @@ public class SJAPI {
 
     }
 
-    /**
-     * 精确查询 (已废弃，合并)
-     */
-    @PostMapping("/search/oto")
-    public Response<?> searchEsoto(@RequestBody Map<String,Object> maps)  {
-        if (maps.size() == 0)
-            return new Response<>(Coco.ParamsNullError);
-
-        int size;
-        int page;
-        Map<String, Object> payloads;
-        String filed;
-        String operat = "";
-        List<String> value;
-        String[] opear = new String[]{"=",">","<",">=","<="};
-        try {
-            size = maps.get("size") == null ?
-                    20 : (Integer) maps.get("size");
-            page = maps.get("page") == null ?
-                    1 : (Integer) maps.get("page");
-            if (!(maps.get("payload") instanceof Map)) return new Response<>(Coco.ParamsTypeError);
-
-            payloads = (Map<String, Object>) maps.get("payload");
-            filed = (String) payloads.get("filed");
-            boolean Valifiled = Maputil.MapExistsBean(filed, LogMessage.class);
-            if (!Valifiled) return new Response<>(Coco.ParamsTypeError);
-
-            if (!(payloads.get("rule") instanceof Map)) return new Response<>(Coco.ParamsTypeError);
-
-            Map<String,Object> rule = (Map<String, Object>) payloads.get("rule");
-            operat = Objects.equals(rule.get("operat"), "") ? "=" : (String) rule.get("operat");
-            value = (List<String>) rule.get("value");
-        } catch (ClassCastException e) {
-            return new Response<>(Coco.ParamsTypeError);
-        }
-
-        if (size <= 0) size = 20;
-        boolean b = Maputil.MapExistsBean(filed, SjMessage.class);
-        if (!b)  return new Response<>(Coco.ParamsError);
-
-        try {
-            return this.comptrollerService.SearchTerm(filed,value,operat, size,page);
-        } catch (ParseException e) {
-            e.printStackTrace();
-            return new Response<>(Coco.ParamsTypeError);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return new Response<>(Coco.ParamsTypeError);
-        }
-
-    }
-
-    /**
-     * 已废弃
-     */
-    @GetMapping ("/findall") 
-    public Response<?> SelectAll(@RequestParam("from") Integer from,
-                              @RequestParam("to") Integer to){
-        try {
-            return this.comptrollerService.findall(from,to);
-        }catch (Exception e){
-            e.printStackTrace();
-            return new Response<>(Coco.ServerError);
-        }
-    }
-
-    /**
-     * 模糊查询 (已废弃)
-     */
-    @PostMapping("/search/like")
-    public Response<?> searchEsLike(@RequestBody Map<String,Object> maps){
-        int size;
-        int page;
-        Map<String, Object> payloads;
-        String filed;
-        String operat = "";
-        List<String> value;
-        String[] opear = new String[]{"=",">","<",">=","<="};
-        try {
-            size = maps.get("size") == null ?
-                    20 : (Integer) maps.get("size");
-            page = maps.get("page") == null ?
-                    1 : (Integer) maps.get("page");
-            if (!(maps.get("payload") instanceof Map)) return new Response<>(Coco.ParamsTypeError);
-
-            payloads = (Map<String, Object>) maps.get("payload");
-            filed = (String) payloads.get("filed");
-            boolean Valifiled = Maputil.MapExistsBean(filed, comptroller.class);
-            if (!Valifiled) return new Response<>(Coco.ParamsTypeError);
-
-            if (!(payloads.get("rule") instanceof Map)) return new Response<>(Coco.ParamsTypeError);
-
-            Map<String,Object> rule = (Map<String, Object>) payloads.get("rule");
-            operat = Objects.equals(rule.get("operat"), "") ? "=" : (String) rule.get("operat");
-            value = (List<String>) rule.get("value");
-        } catch (ClassCastException e) {
-            return new Response<>(Coco.ParamsTypeError);
-        }
-
-        boolean b = Maputil.MapExistsBean(filed, SjMessage.class);
-        if (!b)  return new Response<>(Coco.ParamsError);
-
-        if (size <= 0) size = 20;
-
-        try {
-            return  this.comptrollerService.searchEsLike(filed, value, operat, size,page);
-        }catch (Exception e) {
-            return new Response<>(Coco.ParamsError);
-        }
-    }
-
 
     /**
      * 审计服务多条件查询
      * @param maps
      */
+    @SuppressWarnings("unchecked")
     @PostMapping("/search/likemutil")
-    public  Response<?> searchEsotoMutil(@RequestBody Map<String,Object> maps){
+    public  Response<?> searchEsotoMutil(@RequestBody Map<String,Object> maps)   {
         try {
             Map<String,Object> maps1 = (Map<String, Object>) maps.get("args");
             int per_page = (int) maps1.get("per_page");
@@ -226,39 +121,61 @@ public class SJAPI {
             if (!searchArgsMap.MapToOrder(SjMessage.class)) throw new RuntimeException();
             SearchArgs.ArgsItem argsItem = searchArgsMap.getArgsItem();
             SearchArgs.Order order1 = searchArgsMap.getOrder();
-            Response<List<comptrollerReturn>> listResponse = this.comptrollerService.SearchMutilLog(argsItem, order1, per_page, curr_page);
-            return listResponse;
-        }catch (Exception e) {
+            Response< Map<String, Object> > mapResponse = this.comptrollerService.SearchMutilLog(argsItem, order1, per_page, curr_page);
+            return mapResponse;
+        }  catch (ParseException | IllegalAccessException | NoSuchFieldException e) {
             e.printStackTrace();
-            return new Response<>(Coco.ParamsError);
+            return new Response<>(Coco.ParamsTypeError);
+        } catch (ExceptionInInitializerError e) {
+            e.printStackTrace();
+            return new Response<>(Coco.IndexNameNotFound);
         }
     }
 
-
-    @GetMapping("/down")
-    public void ExportExcel(Map<String,Object> maps, HttpServletResponse response){
-//        response.setContentType("application/octet-stream");//
-//        response.setHeader("content-type", "application/octet-stream");
-        response.setHeader("Content-Disposition", "attachment;fileName=" + "1.xls");// 设置文件名
-        ServletOutputStream outputStream = null;
-        try {
-            outputStream = response.getOutputStream();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        Excel.CreateData("2","2","s","s","3","s");
-        Excel.CreateData("3","2","s","s","3","s");
-        Workbook woe = Excel.CreateData("4","2","s","s","3","s");
-
-        try {
-            woe.write(outputStream);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    @SuppressWarnings("unchecked")
+    @PostMapping("/export")
+    public void ExportExcel(@RequestBody Map<String,Object> maps, HttpServletResponse response){
+//        List<comptrollerReturn> result;
+//        try {
+//            Map<String,Object> maps1 = (Map<String, Object>) maps.get("args");
+//            int per_page = (int) maps1.get("per_page");
+//            int curr_page = (int) maps1.get("curr_page");
+//            Map<String,Object> filters = (Map<String, Object>) maps1.get("filters");
+//            Map<String,Object> order = (Map<String, Object>) maps1.get("order");
+//            SearchArgsMap searchArgsMap = new SearchArgsMap(filters,order);
+//            // 解析查询参数
+//            if (!searchArgsMap.MapTpArgsItem())  throw new RuntimeException();
+//            // 解析排序方式
+//            if (!searchArgsMap.MapToOrder(SjMessage.class)) throw new RuntimeException();
+//
+//            SearchArgs.ArgsItem argsItem = searchArgsMap.getArgsItem();
+//            SearchArgs.Order order1 = searchArgsMap.getOrder();
+//            result = this.comptrollerService.SearchMutilLog(argsItem, order1, per_page, curr_page).getData();
+//            ServletOutputStream outputStream = response.getOutputStream();
+//            response.setHeader("Content-Disposition", "attachment;fileName=" + "1.xls");// 设置文件名
+//            response.setHeader("content-type", "application/octet-stream;charset=UTF-8");
+//            Workbook work = Excel.CreateHeader("审计", "2", "s", "s", "3", "s");
+//            if (result != null) {
+//                for (comptrollerReturn comptrollerReturn : result) {
+//                    Excel.CreateData(
+//                            comptrollerReturn.getAppid(),
+//                            comptrollerReturn.getContent(),
+//                            comptrollerReturn.getAppname(),
+//                            comptrollerReturn.getAuditcontent(),
+//                            comptrollerReturn.getDescription(),
+//                            comptrollerReturn.getMethod(),
+//                            comptrollerReturn.getOrgname(),
+//                            comptrollerReturn.getOrgid(),
+//                            comptrollerReturn.getStatus()
+//                    );
+//                }
+//            }
+//            work.write(outputStream);
+//        }catch (Exception e) {
+//            e.printStackTrace();
+//        }
 
     }
-
 
 
 
