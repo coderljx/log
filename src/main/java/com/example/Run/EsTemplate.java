@@ -59,70 +59,39 @@ public class EsTemplate {
     }
 
     /**
-     * 多条件模糊查询
+     * 多条件模糊查询, 适用log
      */
-    public <T> SearchHits<T> SearchLikeMutil3(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int size, int page, Class<T> cls,String... IndexName) throws ParseException {
-        BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
-        String[] time = new String[2];
+    public <T> SearchHits<T> SearchLikeMutil3(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int size, int page, Class<T> cls,String  IndexName) throws ParseException {
+        if (!this.ExistsIndexName(IndexName)){
+            throw new ExceptionInInitializerError("索引名不存在");
+        }
+        BoolQueryBuilder boolQueryBuilder = null;
         List<SearchArgs.Condition> children = argsItem.getChildren();
-        RangeQueryBuilder rangeQueryBuilder;
         for (SearchArgs.Condition child : children) {
-            String filed = child.getField();
-            String operator = child.getOperator();
-            if (operator.equals("eq")){
-                filed = Maputil.ReplaceAddKeyword(filed);
-            }
-            if (operator.equals("ge")) {
-                time[0] = child.getValue();
-                continue;
-            }
-            if (operator.equals("le")){
-                time[1] = child.getValue();
-            }
-            String value = "";
-            if (child.getValue() != null) {
-                value = child.getValue();
-                if (value.contains(",")) {
-                    String[] split = value.split(",");
-                    for (String s : split) {
-                        boolQueryBuilder.must(new MatchQueryBuilder(filed,s));
-                    }
-                    continue;
-                }
-            }
-            //如果用的是多字段查询
-            if (operator.equals("in")){
-                List<String> values = child.getValues();
-                for (String s : values) {
-                    boolQueryBuilder.should(new MatchQueryBuilder(filed,s));
-                }
-                continue;
-            }
-            // 如果本次查询条件是：时间
-            if (time[0] != null && time[1] != null){
-                Date start = TimeUtils.ParseDate(time[0]);
-                Date end = TimeUtils.ParseDate(time[1]);
-                rangeQueryBuilder = new RangeQueryBuilder(filed);
-                rangeQueryBuilder.gte(start);
-                rangeQueryBuilder.lte(end);
-                boolQueryBuilder.must(rangeQueryBuilder);
-                continue;
-            }
-            boolQueryBuilder.must(new MatchQueryBuilder(filed,value));
+            ExistsQueryBuilder existsQueryBuilder = new ExistsQueryBuilder(child.getField());
+            boolQueryBuilder = new BoolQueryBuilder();
+            boolQueryBuilder.must(existsQueryBuilder);
         }
-        Sort.Direction sor = null;
-        if(order.getOrder_type().equals("ASC")){
-            sor = Sort.Direction.DESC;
+        RangeQueryBuilder rangeQueryBuilder = this.GenRangeQueryBuilder(children);
+        if (rangeQueryBuilder != null) {
+            if (boolQueryBuilder == null) boolQueryBuilder = new BoolQueryBuilder();
+            boolQueryBuilder.must(rangeQueryBuilder);
         }
-        if (order.getOrder_type().equals("DESC") || sor == null){
+        if (boolQueryBuilder == null) return null;
+
+        Sort.Direction sor;
+        if (order.getOrder_type() == null) {
             sor = Sort.Direction.DESC;
+        }else {
+            sor = order.getOrder_type().equals("ASC") ? Sort.Direction.ASC : Sort.Direction.DESC;
         }
         NativeSearchQuery build = new NativeSearchQueryBuilder()
                 .withQuery(boolQueryBuilder)
                 .withPageable(PageRequest.of(page,size))
                 .withSort(Sort.by(sor,order.getField()))
+                .withCollapseField(Maputil.ReplaceAddKeyword("appname"))
                 .build();
-        return elasticsearchRestTemplate.search(build,cls,IndexCoordinates.of(IndexName[0]));
+        return elasticsearchRestTemplate.search(build,cls,IndexCoordinates.of(IndexName));
     }
 
 
@@ -155,12 +124,14 @@ public class EsTemplate {
         for (SearchArgs.Condition child : children) {
             String filed = child.getField();
             String operator = child.getOperator();
-            if (operator.equals("ge")) {
-                time[0] = child.getValue();
-                continue;
-            }
-            if (operator.equals("le")){
-                time[1] = child.getValue();
+            if (operator != null) {
+                if (operator.equals("ge")) {
+                    time[0] = child.getValue();
+                    continue;
+                }
+                if (operator.equals("le")){
+                    time[1] = child.getValue();
+                }
             }
 
             if (time[0] != null && time[1] != null){
@@ -180,7 +151,7 @@ public class EsTemplate {
      * 构建模糊查询条件
      * @return
      */
-    private List<MatchQueryBuilder> GenMatchQueryBuilder(List<SearchArgs.Condition> children) {
+    private  List<MatchQueryBuilder> GenMatchQueryBuilder(List<SearchArgs.Condition> children) {
         List<MatchQueryBuilder> matchQueryBuilder = new ArrayList<>();
         for (SearchArgs.Condition child : children) {
             String filed = child.getField();
@@ -195,6 +166,10 @@ public class EsTemplate {
                         MatchQueryBuilder matchQueryBuilder1 = new MatchQueryBuilder(filed, s);
                         matchQueryBuilder.add(matchQueryBuilder1);
                     }
+                }
+                if (value.equals("")){
+                    ExistsQueryBuilder existsQueryBuilder = new ExistsQueryBuilder(filed);
+
                 }
                 if (operator.contains("=")){
                     MatchQueryBuilder matchQueryBuilder1 = new MatchQueryBuilder(filed, value);
