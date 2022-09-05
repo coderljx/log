@@ -2,10 +2,7 @@ package com.example.Pojo;
 
 import lombok.Data;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.elasticsearch.annotations.Document;
-import org.springframework.data.elasticsearch.annotations.Field;
-import org.springframework.data.elasticsearch.annotations.FieldType;
-import org.springframework.data.elasticsearch.annotations.Mapping;
+import org.springframework.data.elasticsearch.annotations.*;
 
 import java.io.Serializable;
 import java.util.Date;
@@ -26,7 +23,7 @@ import java.util.Date;
  */
 
 @Data
-@Document (indexName = "log",createIndex = false)
+@Document (indexName = "log",createIndex = false,shards = 3)
 public class Log implements Serializable {
     @Id
     @Mapping
@@ -71,7 +68,7 @@ public class Log implements Serializable {
     @Mapping
     private String userid;
 
-    @Field (type = FieldType.Date)
+    @Field (type = FieldType.Text)
     @Mapping
     private Date recorddate;
 

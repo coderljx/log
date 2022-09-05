@@ -2,7 +2,9 @@ package com.example.Run;
 
 import com.example.Utils.Maputil;
 import com.example.Utils.SearchArgs;
+import com.example.Utils.TimeUtils;
 import org.elasticsearch.index.query.*;
+import org.elasticsearch.search.collapse.CollapseBuilder;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
@@ -16,7 +18,9 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.text.ParseException;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 @Component
@@ -84,7 +88,7 @@ public class EsTemplate {
                 .withPageable(request)
                 .withSort(Sort.by(order.getField()))
                 .build();
-        return elasticsearchRestTemplate.search(build,cls,IndexCoordinates.of(IndexName[0]));
+        return elasticsearchRestTemplate.search(build,cls,IndexCoordinates.of(IndexName));
     }
 
 
@@ -109,13 +113,13 @@ public class EsTemplate {
             }
 
             if (time[0] != null && time[1] != null){
-//                Date start = TimeUtils.ParseTimestamp(time[0]);
+                // Date start = TimeUtils.ParseTimestamp("2000-01-01 00:00:00");
 //                Date end = TimeUtils.ParseTimestamp(time[1]);
-                long start = 1662048000000L;
+                long start = 950581812000L;
                 long end = 1651161600123L;
                 rangeQueryBuilder = new RangeQueryBuilder(filed);
                 rangeQueryBuilder.gte(start);
-                rangeQueryBuilder.lte(end);
+
             }
         }
         return rangeQueryBuilder;
@@ -140,10 +144,6 @@ public class EsTemplate {
                         MatchQueryBuilder matchQueryBuilder1 = new MatchQueryBuilder(filed, s);
                         matchQueryBuilder.add(matchQueryBuilder1);
                     }
-                }
-                if (value.equals("")){
-                    ExistsQueryBuilder existsQueryBuilder = new ExistsQueryBuilder(filed);
-
                 }
                 if (operator.contains("=")){
                     MatchQueryBuilder matchQueryBuilder1 = new MatchQueryBuilder(filed, value);
@@ -226,19 +226,21 @@ public class EsTemplate {
         List<SearchArgs.Condition> children = argsItem.getChildren();
         for (SearchArgs.Condition child : children) {
             String field =  child.getField();
+            String operator = child.getOperator();
             String value =  child.getValue();
             if (field.equals("appname") && value.equals("")) {
                 boolQueryBuilder = new BoolQueryBuilder();
                 sourceFilter = this.sourceFilter(field);
-            }else {
-                boolQueryBuilder = new BoolQueryBuilder();
-                boolQueryBuilder.must(new MatchQueryBuilder(field,value));
             }
-        }
-        RangeQueryBuilder rangeQueryBuilder = this.GenRangeQueryBuilder(children);
-        if (rangeQueryBuilder != null) {
-            if (boolQueryBuilder == null) boolQueryBuilder = new BoolQueryBuilder();
-            boolQueryBuilder.must(rangeQueryBuilder);
+            if (field.equals("appname") && !value.equals("")) {
+
+            }
+            if(operator.equals("ge") || operator.equals("le")){
+                boolQueryBuilder = new BoolQueryBuilder();
+                RangeQueryBuilder rangeQueryBuilder = this.GenRangeQueryBuilder(children);
+                boolQueryBuilder.must(rangeQueryBuilder);
+
+            }
         }
         if (boolQueryBuilder == null) return null;
 
@@ -248,14 +250,46 @@ public class EsTemplate {
         }else {
             sor = order.getOrder_type().equals("ASC") ? Sort.Direction.ASC : Sort.Direction.DESC;
         }
+        NativeSearchQuery build;
+        if (sourceFilter != null) {
+            // 如果不是空，代表传入的是appname查询系统名称，则只查询系统名称
+            build = this.GenNativeSearchQuery(boolQueryBuilder,PageRequest.of(page,size),Sort.by(sor,order.getField()),sourceFilter,Maputil.ReplaceAddKeyword("appname"));
+        }else {
+            build = this.GenNativeSearchQuery(boolQueryBuilder,PageRequest.of(page,size),Sort.by(sor,order.getField()),Maputil.ReplaceAddKeyword("appname"));
+        }
+
+        return elasticsearchRestTemplate.search(build,cls,IndexCoordinates.of(IndexName));
+    }
+
+
+    /**
+     * 构建查询条件
+     * @param boolQueryBuilder
+     * @param pageRequest
+     * @param sort
+     * @param sourceFilter
+     * @param disconnt
+     * @return
+     */
+    private NativeSearchQuery GenNativeSearchQuery(BoolQueryBuilder boolQueryBuilder, PageRequest pageRequest, Sort sort, SourceFilter sourceFilter,  String disconnt) {
         NativeSearchQuery build = new NativeSearchQueryBuilder()
                 .withQuery(boolQueryBuilder)
-                .withPageable(PageRequest.of(page,size))
-                .withSort(Sort.by(sor,order.getField()))
+                .withPageable(pageRequest)
+                .withSort(sort)
                 .withSourceFilter(sourceFilter)
-                .withCollapseField(Maputil.ReplaceAddKeyword("appname"))
+                .withCollapseField(disconnt)
                 .build();
-        return elasticsearchRestTemplate.search(build,cls,IndexCoordinates.of(IndexName));
+        return build;
+    }
+
+    private NativeSearchQuery GenNativeSearchQuery(BoolQueryBuilder boolQueryBuilder, PageRequest pageRequest, Sort sort,   String disconnt) {
+        NativeSearchQuery build = new NativeSearchQueryBuilder()
+                .withQuery(boolQueryBuilder)
+                .withPageable(pageRequest)
+                .withSort(sort)
+                .withCollapseField(disconnt)
+                .build();
+        return build;
     }
 
 

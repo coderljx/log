@@ -3,6 +3,7 @@ package com.example.Utils;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.Date;
 
 public class TimeUtils {
@@ -84,6 +85,11 @@ public class TimeUtils {
         return simpleDateFormat.format(date);
     }
 
+
+    public static Instant ParseInstant(String date) throws ParseException {
+        long parselong = Parselong(date);
+        return Instant.ofEpochMilli(parselong);
+    }
 
 
 }

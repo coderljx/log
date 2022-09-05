@@ -142,31 +142,13 @@ public class LogDaoService {
     @SuppressWarnings ("unchecked")
     private Map<String, Object> SearchMulti(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int per_page, int curr_page, List<String> indexName)
             throws ExceptionInInitializerError, Exception {
-        List<SearchHits<Log>> lists = new ArrayList<>();
-        Map<String, Object> reslist = new HashMap<>();
-        indexName.forEach(item -> {
-            System.out.println(item);
-            try {
-                lists.add(this.esTemplate.SearchLikeMutil3(argsItem, order, per_page, curr_page, Log.class, index + item));
-            } catch (ParseException e) {
-                e.printStackTrace();
-            }
-        });
-        int total = 0;
-        List<Map<String, Object>> data = new ArrayList<>();
-        Map<String, Object> map = new HashMap<>();
-        for (SearchHits<Log> list : lists) {
-            Map<String, Object> parse = this.Parse2(list);
-            total += (int) parse.get("total");
-            for (String comptrollerReturn : (List<String>) parse.get("data")) {
-                map.put("system", comptrollerReturn);
-                map.put("time", "2021-01-1 - 2011-031");
-                data.add(map);
-            }
+        String [] in = new String[indexName.size()];
+        for (int i1 = 0; i1 < indexName.size(); i1++) {
+            in[i1] = index + indexName.get(i1);
         }
-        reslist.put("total", total);
-        reslist.put("datas", data);
-        return reslist;
+        SearchHits<Log> searchHits = this.esTemplate.SearchLikeMutil3(argsItem, order, per_page, curr_page, Log.class, in);
+        Map<String, Object> parse = this.Parse(searchHits);
+        return parse;
     }
 
 
@@ -195,20 +177,7 @@ public class LogDaoService {
             argsItem.setChildren(list);
             SearchHits<Log> searchHits = this.esTemplate.SearchLikeMutil3(argsItem, order, per_page, curr_page, Log.class, nowIndex);
             Map<String, Object> parse = this.Parse2(searchHits);
-            int total = 0;
-            Map<String, Object> reslist = new HashMap<>();
-            List<Map<String, Object>> data = new ArrayList<>();
-            Map<String, Object> map = new HashMap<>();
-
-            total += (int) parse.get("total");
-            for (String comptrollerReturn : (List<String>) parse.get("data")) {
-                map.put("system", comptrollerReturn);
-                map.put("time", "2021-01-1 - 2011-031");
-                data.add(map);
-            }
-            reslist.put("total", total);
-            reslist.put("datas", data);
-            return new Response<>(reslist);
+            return new Response<>(parse);
         } else {
             String[] times = new String[2];  // 拿到开始时间和结束时间，用来查询索引库
             for (SearchArgs.Condition child : argsItem.getChildren()) {
@@ -228,7 +197,6 @@ public class LogDaoService {
 
     /**
      * 将es查询的结果进行处理，返回List<LogReturn>数据
-     *
      * @param searchHits
      * @return
      * @throws Exception
@@ -256,16 +224,23 @@ public class LogDaoService {
     /**
      * 第三期修改，只查询了系统名称等字段，所以不需要之前的转换函数
      * @param searchHits
-     * @return
+     * @return 系统名称，时间等信息 不返回全部数据
      */
     private Map<String, Object> Parse2(SearchHits<Log> searchHits) {
         if (searchHits == null) return new HashMap<>();
 
         List<SearchHit<Log>> searchHits1 = searchHits.getSearchHits();
         long totalHits = searchHits.getTotalHits();
-        List<String> datas = new ArrayList<>();
+        List<Map<String,Object>> datas = new ArrayList<>();
         for (SearchHit<Log> comptrollerSearchHit : searchHits1) {
-            datas.add(comptrollerSearchHit.getContent().getAppname());
+            Map<String,Object> maps = new HashMap<>();
+            String index = comptrollerSearchHit.getIndex();
+            String appname = comptrollerSearchHit.getContent().getAppname();
+            String[] substring = index.split(this.index);
+            substring[1] += "01 -" + substring[1] + "30" ;
+            maps.put("time",substring[1]);
+            maps.put("system", appname);
+            datas.add(maps);
         }
         Map<String, Object> res = new HashMap<>();
         res.put("data", datas);
