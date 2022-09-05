@@ -2,32 +2,22 @@ package com.example.Run;
 
 import com.example.Utils.Maputil;
 import com.example.Utils.SearchArgs;
-import com.example.Utils.TimeUtils;
-import org.apache.poi.ss.formula.functions.T;
-import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.index.query.*;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
 import org.springframework.data.elasticsearch.core.IndexOperations;
 import org.springframework.data.elasticsearch.core.SearchHits;
-import org.springframework.data.elasticsearch.core.document.Document;
 import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
-import org.springframework.data.elasticsearch.core.query.IndexQuery;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
+import org.springframework.data.elasticsearch.core.query.SourceFilter;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
-import javax.management.RuntimeErrorException;
-import java.lang.reflect.Field;
-import java.sql.Timestamp;
 import java.text.ParseException;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.Map;
 
 @Component
 public class EsTemplate {
@@ -58,42 +48,26 @@ public class EsTemplate {
         return false;
     }
 
+
+
     /**
-     * 多条件模糊查询, 适用log
+     * 设置过滤条件，只显示某些字段
+     * @param showName
+     * @return
      */
-    public <T> SearchHits<T> SearchLikeMutil3(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int size, int page, Class<T> cls,String  IndexName) throws ParseException {
-        if (!this.ExistsIndexName(IndexName)){
-            throw new ExceptionInInitializerError("索引名不存在");
-        }
-        BoolQueryBuilder boolQueryBuilder = null;
-        List<SearchArgs.Condition> children = argsItem.getChildren();
-        for (SearchArgs.Condition child : children) {
-            ExistsQueryBuilder existsQueryBuilder = new ExistsQueryBuilder(child.getField());
-            boolQueryBuilder = new BoolQueryBuilder();
-            boolQueryBuilder.must(existsQueryBuilder);
-        }
-        RangeQueryBuilder rangeQueryBuilder = this.GenRangeQueryBuilder(children);
-        if (rangeQueryBuilder != null) {
-            if (boolQueryBuilder == null) boolQueryBuilder = new BoolQueryBuilder();
-            boolQueryBuilder.must(rangeQueryBuilder);
-        }
-        if (boolQueryBuilder == null) return null;
+    public  SourceFilter sourceFilter(String showName) {
+        return new SourceFilter() {
+            @Override
+            public String[] getIncludes() {
+                return new String[]{showName};
+            }
 
-        Sort.Direction sor;
-        if (order.getOrder_type() == null) {
-            sor = Sort.Direction.DESC;
-        }else {
-            sor = order.getOrder_type().equals("ASC") ? Sort.Direction.ASC : Sort.Direction.DESC;
-        }
-        NativeSearchQuery build = new NativeSearchQueryBuilder()
-                .withQuery(boolQueryBuilder)
-                .withPageable(PageRequest.of(page,size))
-                .withSort(Sort.by(sor,order.getField()))
-                .withCollapseField(Maputil.ReplaceAddKeyword("appname"))
-                .build();
-        return elasticsearchRestTemplate.search(build,cls,IndexCoordinates.of(IndexName));
+            @Override
+            public String[] getExcludes() {
+                return new String[0];
+            }
+        };
     }
-
 
 
     /**
@@ -201,10 +175,12 @@ public class EsTemplate {
      * @return
      * @throws ParseException
      */
-    public <T> SearchHits<T> SearchLikeMutil4(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int size, int page, Class<T> cls,String IndexName)
+    public <T> SearchHits<T> SearchLikeMutil4(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int size, int page, Class<T> cls,String... IndexName)
             throws ParseException, ExceptionInInitializerError {
-        if (!this.ExistsIndexName(IndexName)){
-            throw new ExceptionInInitializerError("索引名不存在");
+        for (String s : IndexName) {
+            if (!this.ExistsIndexName(s)){
+                throw new ExceptionInInitializerError("索引名不存在");
+            }
         }
         BoolQueryBuilder boolQueryBuilder = null;
         List<SearchArgs.Condition> children = argsItem.getChildren();
@@ -233,5 +209,54 @@ public class EsTemplate {
                 .build();
         return elasticsearchRestTemplate.search(build,cls,IndexCoordinates.of(IndexName));
     }
+
+
+    /**
+     * 多条件模糊查询, 适用log
+     * 对系统名称进行去重复，只返回appname字段
+     */
+    public <T> SearchHits<T> SearchLikeMutil3(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int size, int page, Class<T> cls,String...  IndexName) throws ParseException {
+        for (String s : IndexName) {
+            if (!this.ExistsIndexName(s)){
+                throw new ExceptionInInitializerError("索引名不存在");
+            }
+        }
+        BoolQueryBuilder boolQueryBuilder = null;
+        SourceFilter sourceFilter = null;
+        List<SearchArgs.Condition> children = argsItem.getChildren();
+        for (SearchArgs.Condition child : children) {
+            String field =  child.getField();
+            String value =  child.getValue();
+            if (field.equals("appname") && value.equals("")) {
+                boolQueryBuilder = new BoolQueryBuilder();
+                sourceFilter = this.sourceFilter(field);
+            }else {
+                boolQueryBuilder = new BoolQueryBuilder();
+                boolQueryBuilder.must(new MatchQueryBuilder(field,value));
+            }
+        }
+        RangeQueryBuilder rangeQueryBuilder = this.GenRangeQueryBuilder(children);
+        if (rangeQueryBuilder != null) {
+            if (boolQueryBuilder == null) boolQueryBuilder = new BoolQueryBuilder();
+            boolQueryBuilder.must(rangeQueryBuilder);
+        }
+        if (boolQueryBuilder == null) return null;
+
+        Sort.Direction sor;
+        if (order.getOrder_type() == null) {
+            sor = Sort.Direction.DESC;
+        }else {
+            sor = order.getOrder_type().equals("ASC") ? Sort.Direction.ASC : Sort.Direction.DESC;
+        }
+        NativeSearchQuery build = new NativeSearchQueryBuilder()
+                .withQuery(boolQueryBuilder)
+                .withPageable(PageRequest.of(page,size))
+                .withSort(Sort.by(sor,order.getField()))
+                .withSourceFilter(sourceFilter)
+                .withCollapseField(Maputil.ReplaceAddKeyword("appname"))
+                .build();
+        return elasticsearchRestTemplate.search(build,cls,IndexCoordinates.of(IndexName));
+    }
+
 
 }

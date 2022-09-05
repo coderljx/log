@@ -26,5 +26,6 @@ public class comptrollerReturn {
  private String ipaddress;
  private String createby;
  private String status;
+ private String resparams;
 
 }

@@ -59,5 +59,7 @@ public class SjMessage {
    private String createby;
    @NotNull
    private String status;
+   @NotNull
+   private String resparams;
 
 }

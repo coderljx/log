@@ -4,7 +4,6 @@ import com.example.Dao.comptrollerDao;
 import com.example.Pojo.Model;
 import com.example.Pojo.comptroller;
 import com.example.Pojo.comptrollerReturn;
-import com.example.Run.ES;
 import com.example.Run.ESproperties;
 import com.example.Run.EsTemplate;
 import com.example.Utils.*;
@@ -17,7 +16,6 @@ import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.stereotype.Component;
 
-import javax.validation.Valid;
 import java.text.ParseException;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -55,11 +53,9 @@ public class ComptrollerService {
             return false;
 
         try {
-//                Integer integer = this.comptrollerDao.InsertSJ(comptroller);
-//                com.example.Pojo.comptroller comptroller1 = this.comptrollerDao.SelectByid(this.comptrollerDao.SelectMaxid());
-//                this.comptrollerES.save(comptroller1);
-            comptroller.setId(new Date().getTime());
-            esTemplate.InsertDocument(eSproperties.currenTime(index), comptroller);
+            this.comptrollerDao.InsertSJ(comptroller);
+            com.example.Pojo.comptroller comptroller1 = this.comptrollerDao.SelectByid(this.comptrollerDao.SelectMaxid());
+            esTemplate.InsertDocument(eSproperties.currenTime(index), comptroller1);
             return true;
         } catch (Exception e) {
             e.printStackTrace();

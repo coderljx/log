@@ -2,13 +2,14 @@ package com.example.Service;
 
 
 import com.example.Dao.LogDao;
-import com.example.Pojo.*;
+import com.example.Pojo.Log;
+import com.example.Pojo.LogReturn;
+import com.example.Pojo.Model;
 import com.example.Run.ESproperties;
 import com.example.Run.Email;
 import com.example.Run.EmailProperties;
 import com.example.Run.EsTemplate;
 import com.example.Utils.*;
-import org.apache.xmlbeans.impl.regex.REUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,10 +35,10 @@ public class LogDaoService {
     private final ExecutorService executorService;
     private final String[] values = new String[]{"全部", "正常", "轻微", "一般", "严重", "非常严重"};
 
-    @Value("${es.per.log}")
+    @Value ("${es.per.log}")
     private String index;
 
-    @Autowired(required = false)
+    @Autowired (required = false)
     public LogDaoService(LogDao logDevelopDao,
                          EsTemplate esTemplate,
                          EmailProperties emailProperties,
@@ -138,7 +139,7 @@ public class LogDaoService {
     /**
      * 查询设计到时间，并且跨越多个索引库
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings ("unchecked")
     private Map<String, Object> SearchMulti(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int per_page, int curr_page, List<String> indexName)
             throws ExceptionInInitializerError, Exception {
         List<SearchHits<Log>> lists = new ArrayList<>();
@@ -146,22 +147,25 @@ public class LogDaoService {
         indexName.forEach(item -> {
             System.out.println(item);
             try {
-                lists.add(this.esTemplate.SearchLikeMutil4(argsItem, order, per_page, curr_page, Log.class, index + item));
+                lists.add(this.esTemplate.SearchLikeMutil3(argsItem, order, per_page, curr_page, Log.class, index + item));
             } catch (ParseException e) {
                 e.printStackTrace();
             }
         });
         int total = 0;
-        List<LogReturn> data = new ArrayList<>();
+        List<Map<String, Object>> data = new ArrayList<>();
+        Map<String, Object> map = new HashMap<>();
         for (SearchHits<Log> list : lists) {
-            Map<String, Object> parse = this.Parse(list);
+            Map<String, Object> parse = this.Parse2(list);
             total += (int) parse.get("total");
-            for (LogReturn comptrollerReturn : (List<LogReturn>) parse.get("data")) {
-                data.add(comptrollerReturn);
+            for (String comptrollerReturn : (List<String>) parse.get("data")) {
+                map.put("system", comptrollerReturn);
+                map.put("time", "2021-01-1 - 2011-031");
+                data.add(map);
             }
         }
         reslist.put("total", total);
-        reslist.put("data", data);
+        reslist.put("datas", data);
         return reslist;
     }
 
@@ -173,10 +177,9 @@ public class LogDaoService {
      * @param order
      * @param per_page
      * @param curr_page
-     * @param indexName
      * @throws ParseException
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings ("unchecked")
     public Response<Map<String, Object>> search(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int per_page, int curr_page)
             throws Exception {
         // 查询所有数据
@@ -191,16 +194,20 @@ public class LogDaoService {
             list.add(condition);
             argsItem.setChildren(list);
             SearchHits<Log> searchHits = this.esTemplate.SearchLikeMutil3(argsItem, order, per_page, curr_page, Log.class, nowIndex);
-            Map<String, Object> parse = this.Parse(searchHits);
+            Map<String, Object> parse = this.Parse2(searchHits);
             int total = 0;
             Map<String, Object> reslist = new HashMap<>();
-            List<String> data = new ArrayList<>();
+            List<Map<String, Object>> data = new ArrayList<>();
+            Map<String, Object> map = new HashMap<>();
+
             total += (int) parse.get("total");
             for (String comptrollerReturn : (List<String>) parse.get("data")) {
-                data.add(comptrollerReturn);
+                map.put("system", comptrollerReturn);
+                map.put("time", "2021-01-1 - 2011-031");
+                data.add(map);
             }
             reslist.put("total", total);
-            reslist.put("data", data);
+            reslist.put("datas", data);
             return new Response<>(reslist);
         } else {
             String[] times = new String[2];  // 拿到开始时间和结束时间，用来查询索引库
@@ -215,7 +222,6 @@ public class LogDaoService {
             // 如果开始时间和结束时间都有，则进行解析出所有的索引
             List<String> mounth = eSproperties.suxMonth(times[0], times[1]);
             return new Response<>(this.SearchMulti(argsItem, order, per_page, curr_page, mounth));
-
         }
 
     }
@@ -228,6 +234,8 @@ public class LogDaoService {
      * @throws Exception
      */
     private Map<String, Object> Parse(SearchHits<Log> searchHits) throws ParseException, IllegalAccessException {
+        if (searchHits == null) return new HashMap<>();
+
         List<SearchHit<Log>> searchHits1 = searchHits.getSearchHits();
         long totalHits = searchHits.getTotalHits();
         List<LogReturn> datas = new ArrayList<>();
@@ -245,12 +253,19 @@ public class LogDaoService {
         return res;
     }
 
-    private Map<String, Object> Parse2(SearchHits<Log> searchHits)  {
+    /**
+     * 第三期修改，只查询了系统名称等字段，所以不需要之前的转换函数
+     * @param searchHits
+     * @return
+     */
+    private Map<String, Object> Parse2(SearchHits<Log> searchHits) {
+        if (searchHits == null) return new HashMap<>();
+
         List<SearchHit<Log>> searchHits1 = searchHits.getSearchHits();
         long totalHits = searchHits.getTotalHits();
         List<String> datas = new ArrayList<>();
         for (SearchHit<Log> comptrollerSearchHit : searchHits1) {
-            datas = comptrollerSearchHit.getHighlightField("appname.keyword");
+            datas.add(comptrollerSearchHit.getContent().getAppname());
         }
         Map<String, Object> res = new HashMap<>();
         res.put("data", datas);

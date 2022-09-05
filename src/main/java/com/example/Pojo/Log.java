@@ -30,7 +30,7 @@ import java.util.Date;
 public class Log implements Serializable {
     @Id
     @Mapping
-    private Long id;
+    private String id;
 
     /**
      * type : 字段数据类型

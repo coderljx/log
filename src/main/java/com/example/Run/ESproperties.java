@@ -1,25 +1,16 @@
 package com.example.Run;
 
-import com.example.Pojo.Log;
-import com.example.Pojo.comptroller;
 import com.example.Utils.TimeUtils;
 import lombok.Data;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.elasticsearch.annotations.Document;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Proxy;
-import java.sql.Timestamp;
 import java.text.ParseException;
-import java.util.*;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.FutureTask;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
 
 @Data
 @Component
@@ -83,7 +74,6 @@ public class ESproperties  {
         }else {
             mount.addAll(suxYear(starTime, endTime));
         }
-
         return mount;
     }
 

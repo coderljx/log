@@ -8,16 +8,13 @@ import com.example.Utils.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import java.sql.Timestamp;
 import java.text.ParseException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 @RestController
 @RequestMapping ("/log")
@@ -133,6 +130,7 @@ public class LogAPI {
 
 
     @PostMapping ("/search/likemutil")
+    @SuppressWarnings ({"unchecked"})
     public Response<?> SelecteAll(@RequestBody Map<String,Object> maps) {
         try {
             Map<String,Object> maps1 = (Map<String, Object>) maps.get("args");

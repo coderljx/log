@@ -8,7 +8,7 @@ import lombok.Data;
 @Data
 public class LogReturn {
 
- private Long id;
+ private String id;
  private String appid;
  private String appname;
  private String orgid;

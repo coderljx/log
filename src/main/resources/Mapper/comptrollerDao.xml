@@ -5,13 +5,13 @@
 
     <insert id="InsertSJ">
         INSERT INTO log_audit(appid,appname, orgid, orgname,method,description,content,params,
-                              userid,recorddate,ipaddress,createdate,createby,moudel,username,status)
+                              userid,recorddate,ipaddress,createdate,createby,moudel,username,status,resparams)
         VALUES(
                #{comptroller.appid},#{comptroller.appname},
                #{comptroller.orgid},#{comptroller.orgname},#{comptroller.method},
                #{comptroller.description},#{comptroller.content},#{comptroller.params},#{comptroller.userid}
                ,#{comptroller.recorddate},#{comptroller.ipaddress},now(),#{comptroller.createby},#{comptroller.moudel},
-               #{comptroller.username}, #{comptroller.status}
+               #{comptroller.username}, #{comptroller.status},#{comptroller.resparams}
         )
     </insert>
 
