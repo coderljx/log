@@ -3,8 +3,10 @@ package com.example.Run;
 import com.example.Utils.Maputil;
 import com.example.Utils.SearchArgs;
 import com.example.Utils.TimeUtils;
-import org.elasticsearch.index.query.*;
-import org.elasticsearch.search.collapse.CollapseBuilder;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.MatchAllQueryBuilder;
+import org.elasticsearch.index.query.MatchQueryBuilder;
+import org.elasticsearch.index.query.RangeQueryBuilder;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
@@ -18,9 +20,7 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.text.ParseException;
-import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 @Component
@@ -80,15 +80,18 @@ public class EsTemplate {
      */
     public <T> SearchHits<T> SearchAll(PageRequest request, Class<T> cls, SearchArgs.Order order, String... IndexName){
 
-        if (!this.ExistsIndexName(IndexName[0])){
-            throw new RuntimeException("索引名不存在");
+        List<String> NowIndex = new ArrayList<>();
+        for (String s : IndexName) {
+            if (this.ExistsIndexName(s)){
+                NowIndex.add(s);
+            }
         }
         NativeSearchQuery build = new NativeSearchQueryBuilder()
                 .withQuery(new MatchAllQueryBuilder())
                 .withPageable(request)
                 .withSort(Sort.by(order.getField()))
                 .build();
-        return elasticsearchRestTemplate.search(build,cls,IndexCoordinates.of(IndexName));
+        return elasticsearchRestTemplate.search(build,cls,IndexCoordinates.of((String[]) NowIndex.toArray()));
     }
 
 
@@ -111,15 +114,12 @@ public class EsTemplate {
                     time[1] = child.getValue();
                 }
             }
-
             if (time[0] != null && time[1] != null){
-                // Date start = TimeUtils.ParseTimestamp("2000-01-01 00:00:00");
-//                Date end = TimeUtils.ParseTimestamp(time[1]);
-                long start = 950581812000L;
-                long end = 1651161600123L;
+                long start = TimeUtils.Parselong(time[0]);
+                long end = TimeUtils.Parselong(time[1]);;
                 rangeQueryBuilder = new RangeQueryBuilder(filed);
                 rangeQueryBuilder.gte(start);
-
+                rangeQueryBuilder.lte(end);
             }
         }
         return rangeQueryBuilder;
@@ -177,9 +177,10 @@ public class EsTemplate {
      */
     public <T> SearchHits<T> SearchLikeMutil4(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int size, int page, Class<T> cls,String... IndexName)
             throws ParseException, ExceptionInInitializerError {
+        List<String> NowIndex = new ArrayList<>();
         for (String s : IndexName) {
-            if (!this.ExistsIndexName(s)){
-                throw new ExceptionInInitializerError("索引名不存在");
+            if (this.ExistsIndexName(s)){
+                NowIndex.add(s);
             }
         }
         BoolQueryBuilder boolQueryBuilder = null;
@@ -207,7 +208,7 @@ public class EsTemplate {
                 .withPageable(PageRequest.of(page,size))
                 .withSort(Sort.by(sor,order.getField()))
                 .build();
-        return elasticsearchRestTemplate.search(build,cls,IndexCoordinates.of(IndexName));
+        return elasticsearchRestTemplate.search(build,cls,IndexCoordinates.of((String[]) NowIndex.toArray()));
     }
 
 
@@ -216,9 +217,10 @@ public class EsTemplate {
      * 对系统名称进行去重复，只返回appname字段
      */
     public <T> SearchHits<T> SearchLikeMutil3(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int size, int page, Class<T> cls,String...  IndexName) throws ParseException {
+        List<String> NowIndex = new ArrayList<>();
         for (String s : IndexName) {
-            if (!this.ExistsIndexName(s)){
-                throw new ExceptionInInitializerError("索引名不存在");
+            if (this.ExistsIndexName(s)){
+                NowIndex.add(s);
             }
         }
         BoolQueryBuilder boolQueryBuilder = null;
@@ -235,11 +237,10 @@ public class EsTemplate {
             if (field.equals("appname") && !value.equals("")) {
 
             }
-            if(operator.equals("ge") || operator.equals("le")){
+            if(operator != null){
                 boolQueryBuilder = new BoolQueryBuilder();
                 RangeQueryBuilder rangeQueryBuilder = this.GenRangeQueryBuilder(children);
                 boolQueryBuilder.must(rangeQueryBuilder);
-
             }
         }
         if (boolQueryBuilder == null) return null;

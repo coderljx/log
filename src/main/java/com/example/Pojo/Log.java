@@ -23,7 +23,7 @@ import java.util.Date;
  */
 
 @Data
-@Document (indexName = "log",createIndex = false,shards = 3)
+@Document (indexName = "log",createIndex = false,shards = 5)
 public class Log implements Serializable {
     @Id
     @Mapping

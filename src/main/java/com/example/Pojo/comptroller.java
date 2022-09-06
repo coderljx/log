@@ -39,7 +39,7 @@ CREATE_BY	varchar(30)	否		创建人
  */
 
 @Data
-@Document(indexName = "sj", createIndex = false)
+@Document(indexName = "sj", createIndex = false,shards = 5)
 public class comptroller implements Serializable {
     @Id
     private Long id;
