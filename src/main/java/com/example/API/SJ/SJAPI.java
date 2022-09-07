@@ -108,7 +108,7 @@ public class SJAPI {
             if (!searchArgsMap.MapToOrder(SjMessage.class)) throw new RuntimeException();
             SearchArgs.ArgsItem argsItem = searchArgsMap.getArgsItem();
             SearchArgs.Order order1 = searchArgsMap.getOrder();
-            Response< Map<String, Object> > mapResponse = this.comptrollerService.SearchMutilLog(argsItem, order1, per_page, curr_page);
+            Response< Map<String, Object> > mapResponse = this.comptrollerService.SearchMutisj(argsItem, order1, per_page, curr_page);
             return mapResponse;
         }  catch (ParseException | IllegalAccessException | NoSuchFieldException e) {
             e.printStackTrace();

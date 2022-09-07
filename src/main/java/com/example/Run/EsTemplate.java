@@ -68,7 +68,7 @@ public class EsTemplate {
 
     /**
      * 查询结果2， 只查询部分字段，例如日志只查询系统名称等内容
-     * 可以去重
+     * 可以去重 默认根据 appname去重 只查询系统不同的库
      * @param <T>
      * @return
      */
@@ -78,7 +78,7 @@ public class EsTemplate {
         if (IndexName.length == 0) {
             return null;
         }
-        NativeSearchQuery appname = this.GenNativeSearchQuery(boolQueryBuilder, pageRequest, sort, sourceFilter, "appname");
+        NativeSearchQuery appname = this.GenNativeSearchQuery(boolQueryBuilder, pageRequest, sort, sourceFilter, "appname.keyword");
         return elasticsearchRestTemplate.search(appname,cls,IndexCoordinates.of(IndexName));
     }
 
@@ -339,7 +339,7 @@ public class EsTemplate {
      * @param disconnt
      * @return
      */
-    private NativeSearchQuery GenNativeSearchQuery(BoolQueryBuilder boolQueryBuilder, PageRequest pageRequest, Sort sort,   String disconnt) {
+    private NativeSearchQuery GenNativeSearchQuery(BoolQueryBuilder boolQueryBuilder, PageRequest pageRequest, Sort sort, String disconnt) {
         NativeSearchQuery build = new NativeSearchQueryBuilder()
                 .withQuery(boolQueryBuilder)
                 .withPageable(pageRequest)
@@ -357,12 +357,11 @@ public class EsTemplate {
      * @return
      */
     private NativeSearchQuery GenNativeSearchQuery(BoolQueryBuilder boolQueryBuilder, PageRequest pageRequest, Sort sort) {
-        NativeSearchQuery build = new NativeSearchQueryBuilder()
+        return new NativeSearchQueryBuilder()
                 .withQuery(boolQueryBuilder)
                 .withPageable(pageRequest)
                 .withSort(sort)
                 .build();
-        return build;
     }
 
     /**

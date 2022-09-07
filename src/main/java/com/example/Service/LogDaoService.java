@@ -1,7 +1,6 @@
 package com.example.Service;
 
 
-import com.example.Dao.LogDao;
 import com.example.Pojo.Log;
 import com.example.Pojo.LogReturn;
 import com.example.Pojo.Model;
@@ -21,6 +20,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
+import org.springframework.data.elasticsearch.core.query.SourceFilter;
 import org.springframework.stereotype.Service;
 
 import java.text.ParseException;
@@ -31,7 +31,6 @@ import java.util.concurrent.ExecutorService;
 @Service
 public class LogDaoService {
     private final Logger mylog = LoggerFactory.getLogger(LogDaoService.class);
-    private final LogDao logDevelopDao;
     private final EsTemplate esTemplate;
     private final Email email;
     private final EmailProperties emailProperties;
@@ -44,13 +43,12 @@ public class LogDaoService {
     private String index;
 
     @Autowired (required = false)
-    public LogDaoService(LogDao logDevelopDao,
+    public LogDaoService(
                          EsTemplate esTemplate,
                          EmailProperties emailProperties,
                          ESproperties eSproperties,
                          ExecutorService executorService,
                          Email email) {
-        this.logDevelopDao = logDevelopDao;
         this.esTemplate = esTemplate;
         this.emailProperties = emailProperties;
         this.eSproperties = eSproperties;
@@ -79,10 +77,8 @@ public class LogDaoService {
         }
     }
 
-    public Response<Map<String, Object>> findall(PageRequest request, SearchArgs.Order order, String indexName) throws Exception {
-        SearchHits<Log> searchHits = this.esTemplate.SearchAll(request, cls, order, indexName);
-        Map<String, Object> parse = this.Parse(searchHits);
-        return new Response<>(parse);
+    public SearchHits<Log>   findall(PageRequest request, SearchArgs.Order order, String indexName) throws Exception { 
+        return this.esTemplate.SearchAll(request, cls, order, indexName);
     }
 
 
@@ -104,16 +100,24 @@ public class LogDaoService {
         email.Send();
     }
 
-
+    /**
+     * 只查询时间系统等信息，过滤其他字段
+     * @param argsItem
+     * @param order
+     * @param per_page
+     * @param curr_page
+     * @return
+     * @throws Exception
+     */
     public Response<Map<String, Object>> SearchMutilLog(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int per_page, int curr_page) throws Exception {
         // 查询所有数据
         String indexName = eSproperties.currenTime(index);
         if (argsItem.getType() == null && argsItem.getChildren() == null) {
             PageRequest of = PageRequest.of(curr_page, per_page);
-            Response<Map<String, Object>> findall = this.findall(of, order, indexName);
-            return findall;
+            SearchHits<Log> findall = this.findall(of, order, indexName);
+            Map<String, Object> stringObjectMap = this.Parse2(findall);
+            return new Response<>(stringObjectMap);
         }
-
         List<SearchArgs.Condition> children = argsItem.getChildren();
         String[] times = new String[2];  // 拿到开始时间和结束时间，用来查询索引库
         String timeFiled = "";
@@ -140,31 +144,79 @@ public class LogDaoService {
             long[] lons = new long[2];
             lons[0] = TimeUtils.Parselong(times[0]);
             lons[1] = TimeUtils.Parselong(times[1]);
-            return new Response<>(this.SearchMulti(argsItem, order, per_page, curr_page,lons, timeFiled, logINdex));
+            SearchHits<Log> appname = this.SearchMulti(argsItem, order, per_page, curr_page, lons, timeFiled, "appname", logINdex);
+            return new Response<>(this.Parse2(appname));
+        }else {
+            SearchHits<Log> appname = this.SearchMulti(argsItem, order, per_page, curr_page, null, timeFiled, "" ,new String[]{indexName});
+            return new Response<>(this.Parse2(appname));
         }
-        SearchHits<Log> searchHits = this.esTemplate.SearchLikeMutil4(argsItem, order, per_page, curr_page, Log.class, indexName);
-        return new Response<>(this.Parse(searchHits));
+
     }
+
+
+    /**
+     * 根据查询的结果删除数据
+     * @param argsItem
+     * @param order
+     * @param per_page
+     * @param curr_page
+     */
+    public void delete(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int per_page, int curr_page) throws Exception {
+        String indexName = eSproperties.currenTime(index);
+        if (argsItem.getType() == null && argsItem.getChildren() == null) {
+            PageRequest of = PageRequest.of(curr_page, per_page);
+            SearchHits<Log> findall = this.findall(of, order, indexName);
+            this.Batch(this.Parse3(findall),indexName);
+        }
+        List<SearchArgs.Condition> children = argsItem.getChildren();
+        String[] times = new String[2];  // 拿到开始时间和结束时间，用来查询索引库
+        String timeFiled = "";
+        for (SearchArgs.Condition child : children) {
+            // 如果本次查询设计到时间查询
+            if (child.getOperator().equals("ge") || child.getOperator().equals("le")) {
+                timeFiled = child.getField();
+                if (child.getOperator().equals("ge")) times[0] = child.getValue();
+
+                if (child.getOperator().equals("le")) times[1] = child.getValue();
+            }
+        }
+        if (times[0] != null && times[1] != null) {
+            String[] logINdex = eSproperties.parseIndexName(eSproperties.suxMonth(times[0], times[1]), index);
+            long[] lons = new long[2];
+            lons[0] = TimeUtils.Parselong(times[0]);
+            lons[1] = TimeUtils.Parselong(times[1]);
+            SearchHits<Log> appname = this.SearchMulti(argsItem, order, per_page, curr_page, lons, timeFiled, "", logINdex);
+            List<String> list = this.Parse3(appname);
+            this.Batch(list,logINdex);
+        }else {
+            SearchHits<Log> searchHits = this.SearchMulti(argsItem, order, per_page, curr_page, null, timeFiled, "", new String[]{indexName});
+            List<String> list = this.Parse3(searchHits);
+            this.Batch(list,indexName);
+        }
+
+    }
+
+
+//    ----------------------------------分隔符-----------------------------------------
 
     /**
      * 查询设计到时间，并且跨越多个索引库
      */
     @SuppressWarnings ("unchecked")
-    private Map<String, Object> SearchMulti(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int per_page, int curr_page,
-                                            long[] lons,String timeFiled,String[] indexName)
-            throws ExceptionInInitializerError, Exception {
-
+    private SearchHits<Log> SearchMulti(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int per_page, int curr_page,
+                                            long[] lons,String timeFiled,String sourceFilter , String[] indexName)
+            throws ExceptionInInitializerError {
         BoolQueryBuilder boolQueryBuilder = this.SearchMultiBool(argsItem);
         Sort orders = this.esTemplate.GenSort(order);
+        SourceFilter appname = null;
+        if (!sourceFilter.equals(""))  appname = this.esTemplate.sourceFilter(sourceFilter);
+
         PageRequest pageRequest = this.esTemplate.GenPageRequest(curr_page, per_page);
         if (lons[0] > 0L && lons[1] > 0L && !timeFiled.equals("")) {
             RangeQueryBuilder rangeQueryBuilder = this.esTemplate.GenRangeQueryBuilder(timeFiled, lons[0], lons[1]);
             boolQueryBuilder.must(rangeQueryBuilder);
         }
- 
-        SearchHits<Log> searchHits = this.esTemplate.SearchLikeMutil3(argsItem, order, per_page, curr_page, Log.class, in);
-        Map<String, Object> parse = this.Parse(searchHits);
-        return parse;
+        return this.esTemplate.SearchLikeMutil2(boolQueryBuilder, pageRequest, appname, orders, cls, indexName);
     }
 
     /**
@@ -195,62 +247,18 @@ public class LogDaoService {
         return boolQueryBuilder;
     }
 
-
     /**
-     * 第三期修改查询接口，只查询系统名称和时间段
-     *
-     * @param argsItem
-     * @param order
-     * @param per_page
-     * @param curr_page
-     * @throws ParseException
+     * 批量删除查询出来的日志信息， 根据id
+     * @param id
+     * @param indexName
      */
-    @SuppressWarnings ("unchecked")
-    public Response<Map<String, Object>> search(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int per_page, int curr_page)
-            throws Exception {
-        // 查询所有数据
-        String nowIndex = eSproperties.currenTime(this.index);
-        // 如果参数为空，代表查询所有
-        if (argsItem.getType() == null && argsItem.getChildren() == null) {
-            argsItem = new SearchArgs.ArgsItem();
-            SearchArgs.Condition condition = new SearchArgs.Condition();
-            condition.setField("appname");
-            condition.setValue("");
-            List<SearchArgs.Condition> list = new ArrayList<>();
-            list.add(condition);
-            argsItem.setChildren(list);
-            SearchHits<Log> searchHits = this.esTemplate.SearchLikeMutil3(argsItem, order, per_page, curr_page, Log.class, nowIndex);
-            Map<String, Object> parse = this.Parse2(searchHits);
-            return new Response<>(parse);
-        } else {
-            String[] times = new String[2];  // 拿到开始时间和结束时间，用来查询索引库
-            for (SearchArgs.Condition child : argsItem.getChildren()) {
-                // 如果本次查询设计到时间查询
-                if (child.getOperator().equals("ge") || child.getOperator().equals("le")) {
-                    if (child.getOperator().equals("ge")) times[0] = child.getValue();
+    private void Batch(List<String> id, String... indexName) {
+        if (id.size() <= 0) return;
 
-                    if (child.getOperator().equals("le")) times[1] = child.getValue();
-                }
-            }
-            // 如果开始时间和结束时间都有，则进行解析出所有的索引
-            List<String> mounth = eSproperties.suxMonth(times[0], times[1]);
-            return new Response<>(this.SearchMulti(argsItem, order, per_page, curr_page, mounth));
+        for (String s : id) {
+            this.esTemplate.delete(s,indexName);
         }
-
     }
-
-    /**
-     * 根据查询的结果删除数据
-     * @param argsItem
-     * @param order
-     * @param per_page
-     * @param curr_page
-     */
-    public void delete(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int per_page, int curr_page)
-    {
-
-    }
-
 
     /**
      * 将es查询的结果进行处理，返回List<LogReturn>数据
@@ -304,6 +312,24 @@ public class LogDaoService {
         res.put("total", Math.toIntExact(totalHits));
         return res;
     }
+
+    /**
+     * 提供删除能力，只筛选出所有数据的id，方便之后删除操作
+     * @param searchHits
+     * @return
+     */
+    private List<String> Parse3(SearchHits<Log> searchHits) {
+        if (searchHits == null) return new ArrayList<>();
+
+        List<SearchHit<Log>> searchHits1 = searchHits.getSearchHits();
+        List<String> datas = new ArrayList<>();
+        for (SearchHit<Log> comptrollerSearchHit : searchHits1) {
+            String id = comptrollerSearchHit.getId();
+            datas.add(id);
+        }
+        return datas;
+    }
+
 
     /**
      * 获得页面的标签模块

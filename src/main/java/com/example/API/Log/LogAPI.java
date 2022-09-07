@@ -101,34 +101,12 @@ public class LogAPI {
         }
     }
 
+
     /**
-     * 多条件查询
+     * 查询出结果 只显示系统名称等信息
+     * @param maps
+     * @return
      */
-   // @PostMapping ("/search/likemutil")
-    @SuppressWarnings ({"unchecked"})
-    public Response<?> Selectesl(@RequestBody Map<String,Object> maps) {
-        try {
-            Map<String,Object> maps1 = (Map<String, Object>) maps.get("args");
-            int per_page = (int) maps1.get("per_page");
-            int curr_page = (int) maps1.get("curr_page");
-            Map<String,Object> filters = (Map<String, Object>) maps1.get("filters");
-            Map<String,Object> order = (Map<String, Object>) maps1.get("order");
-            SearchArgsMap searchArgsMap = new SearchArgsMap(filters,order);
-            // 解析查询参数
-            if (!searchArgsMap.MapTpArgsItem())  throw new RuntimeException();
-            // 解析排序方式
-            if (!searchArgsMap.MapToOrder(LogMessage.class)) throw new RuntimeException();
-
-            SearchArgs.ArgsItem argsItem = searchArgsMap.getArgsItem();
-            SearchArgs.Order order1 = searchArgsMap.getOrder();
-            return this.logDevelopDaoService.SearchMutilLog(argsItem,order1,per_page,curr_page);
-        }catch (Exception e) {
-            e.printStackTrace();
-            return new Response<>(Coco.ParamsError);
-        }
-    }
-
-
     @PostMapping ("/search/likemutil")
     @SuppressWarnings ({"unchecked"})
     public Response<?> SelecteAll(@RequestBody Map<String,Object> maps) {
@@ -147,7 +125,7 @@ public class LogAPI {
             SearchArgs.ArgsItem argsItem = searchArgsMap.getArgsItem();
             SearchArgs.Order order1 = searchArgsMap.getOrder();
 
-            Response<Map<String, Object>> search = this.logDevelopDaoService.search(argsItem, order1, per_page, curr_page);
+            Response<Map<String, Object>> search = this.logDevelopDaoService.SearchMutilLog(argsItem, order1, per_page, curr_page);
             return search;
         }catch (Exception e) {
             e.printStackTrace();
@@ -156,7 +134,11 @@ public class LogAPI {
     }
 
 
-
+    /**
+     * 根据查询出的id 删除对应的数据
+     * @param maps
+     * @return
+     */
     @PostMapping ("/delete/likemutil")
     @SuppressWarnings ({"unchecked"})
     public Response<?> delete(@RequestBody Map<String,Object> maps) {
@@ -175,8 +157,8 @@ public class LogAPI {
             SearchArgs.ArgsItem argsItem = searchArgsMap.getArgsItem();
             SearchArgs.Order order1 = searchArgsMap.getOrder();
 
-            Response<Map<String, Object>> search = this.logDevelopDaoService.search(argsItem, order1, per_page, curr_page);
-            return search;
+            this.logDevelopDaoService.delete(argsItem,order1,per_page,curr_page);
+            return new Response<>();
         }catch (Exception e) {
             e.printStackTrace();
             return new Response<>(Coco.ParamsError);
