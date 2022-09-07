@@ -10,11 +10,15 @@ import com.example.Run.Email;
 import com.example.Run.EmailProperties;
 import com.example.Run.EsTemplate;
 import com.example.Utils.*;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.MatchQueryBuilder;
+import org.elasticsearch.index.query.RangeQueryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.stereotype.Service;
@@ -34,6 +38,7 @@ public class LogDaoService {
     private final ESproperties eSproperties;
     private final ExecutorService executorService;
     private final String[] values = new String[]{"全部", "正常", "轻微", "一般", "严重", "非常严重"};
+    private final Class<Log> cls = Log.class;
 
     @Value ("${es.per.log}")
     private String index;
@@ -75,7 +80,7 @@ public class LogDaoService {
     }
 
     public Response<Map<String, Object>> findall(PageRequest request, SearchArgs.Order order, String indexName) throws Exception {
-        SearchHits<Log> searchHits = this.esTemplate.SearchAll(request, Log.class, order, indexName);
+        SearchHits<Log> searchHits = this.esTemplate.SearchAll(request, cls, order, indexName);
         Map<String, Object> parse = this.Parse(searchHits);
         return new Response<>(parse);
     }
@@ -111,9 +116,11 @@ public class LogDaoService {
 
         List<SearchArgs.Condition> children = argsItem.getChildren();
         String[] times = new String[2];  // 拿到开始时间和结束时间，用来查询索引库
+        String timeFiled = "";
         for (SearchArgs.Condition child : children) {
             // 如果本次查询设计到时间查询
             if (child.getOperator().equals("ge") || child.getOperator().equals("le")) {
+                timeFiled = child.getField();
                 if (child.getOperator().equals("ge")) times[0] = child.getValue();
 
                 if (child.getOperator().equals("le")) times[1] = child.getValue();
@@ -129,8 +136,11 @@ public class LogDaoService {
 
         }
         if (times[0] != null && times[1] != null) {
-            List<String> mounth = eSproperties.suxMonth(times[0], times[1]);
-            return new Response<>(this.SearchMulti(argsItem, order, per_page, curr_page, mounth));
+            String[] logINdex = eSproperties.parseIndexName(eSproperties.suxMonth(times[0], times[1]), index);
+            long[] lons = new long[2];
+            lons[0] = TimeUtils.Parselong(times[0]);
+            lons[1] = TimeUtils.Parselong(times[1]);
+            return new Response<>(this.SearchMulti(argsItem, order, per_page, curr_page,lons, timeFiled, logINdex));
         }
         SearchHits<Log> searchHits = this.esTemplate.SearchLikeMutil4(argsItem, order, per_page, curr_page, Log.class, indexName);
         return new Response<>(this.Parse(searchHits));
@@ -140,15 +150,49 @@ public class LogDaoService {
      * 查询设计到时间，并且跨越多个索引库
      */
     @SuppressWarnings ("unchecked")
-    private Map<String, Object> SearchMulti(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int per_page, int curr_page, List<String> indexName)
+    private Map<String, Object> SearchMulti(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int per_page, int curr_page,
+                                            long[] lons,String timeFiled,String[] indexName)
             throws ExceptionInInitializerError, Exception {
-        String [] in = new String[indexName.size()];
-        for (int i1 = 0; i1 < indexName.size(); i1++) {
-            in[i1] = index + indexName.get(i1);
+
+        BoolQueryBuilder boolQueryBuilder = this.SearchMultiBool(argsItem);
+        Sort orders = this.esTemplate.GenSort(order);
+        PageRequest pageRequest = this.esTemplate.GenPageRequest(curr_page, per_page);
+        if (lons[0] > 0L && lons[1] > 0L && !timeFiled.equals("")) {
+            RangeQueryBuilder rangeQueryBuilder = this.esTemplate.GenRangeQueryBuilder(timeFiled, lons[0], lons[1]);
+            boolQueryBuilder.must(rangeQueryBuilder);
         }
+ 
         SearchHits<Log> searchHits = this.esTemplate.SearchLikeMutil3(argsItem, order, per_page, curr_page, Log.class, in);
         Map<String, Object> parse = this.Parse(searchHits);
         return parse;
+    }
+
+    /**
+     * 根据前端传入的参数，生成对应的过滤查询
+     * @param argsItem
+     * @return
+     */
+    private BoolQueryBuilder SearchMultiBool(SearchArgs.ArgsItem argsItem) {
+        List<SearchArgs.Condition> children = argsItem.getChildren();
+        BoolQueryBuilder boolQueryBuilder = this.esTemplate.GenBoolQueryBuilder();
+        for (SearchArgs.Condition child : children) {
+            String operator = child.getOperator();
+            String field = child.getField();
+            String value = child.getValue();
+            List<String> values = child.getValues();
+            if (operator.equals("=")) {
+                MatchQueryBuilder matchQueryBuilder = this.esTemplate.GenMatchQueryBuilder(field, value);
+                boolQueryBuilder.must(matchQueryBuilder);
+            }
+            // 如果是多字段查询
+            if (operator.equals("in") && values != null) {
+                for (String s : values) {
+                    MatchQueryBuilder matchQueryBuilder = this.esTemplate.GenMatchQueryBuilder(field, s);
+                    boolQueryBuilder.must(matchQueryBuilder);
+                }
+            }
+        }
+        return boolQueryBuilder;
     }
 
 
@@ -194,6 +238,19 @@ public class LogDaoService {
         }
 
     }
+
+    /**
+     * 根据查询的结果删除数据
+     * @param argsItem
+     * @param order
+     * @param per_page
+     * @param curr_page
+     */
+    public void delete(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int per_page, int curr_page)
+    {
+
+    }
+
 
     /**
      * 将es查询的结果进行处理，返回List<LogReturn>数据

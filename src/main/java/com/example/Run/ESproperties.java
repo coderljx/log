@@ -41,6 +41,21 @@ public class ESproperties  {
     }
 
     /**
+     * 将转换后的日期跟 索引前缀进行拼接
+     * @param list
+     * @return
+     */
+    public String[] parseIndexName(List<String> list,String prie) {
+        if (list.size() == 0) return new String[0];
+
+        List<String> newIndex = new ArrayList<>();
+        for (String s : list) {
+            newIndex.add(prie + s);
+        }
+        return newIndex.toArray(new String[]{});
+    }
+
+    /**
      * 计算两个时间相差的月份, 返回他们直接间隔的每一个月，用以查询es索引库
      * @param time1 2022-01-01 00:00:00
      * @param time2 2022-02-01 00:00:00

@@ -3,8 +3,11 @@ package com.example.Utils;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.elasticsearch.index.query.MatchQueryBuilder;
+import org.elasticsearch.index.query.RangeQueryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Sort;
 
 import java.util.List;
 
@@ -54,6 +57,13 @@ public class SearchArgs {
     public static class Order {
         private String field;
         private String order_type;
+    }
+
+    @Data
+    public static class ESArgs {
+        private MatchQueryBuilder matchQueryBuilder;
+        private RangeQueryBuilder rangeQueryBuilder;
+        private Sort sort;
     }
 
 

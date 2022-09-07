@@ -153,9 +153,34 @@ public class LogAPI {
             e.printStackTrace();
             return new Response<>(Coco.ParamsError);
         }
-
     }
 
 
+
+    @PostMapping ("/delete/likemutil")
+    @SuppressWarnings ({"unchecked"})
+    public Response<?> delete(@RequestBody Map<String,Object> maps) {
+        try {
+            Map<String,Object> maps1 = (Map<String, Object>) maps.get("args");
+            int per_page = (int) maps1.get("per_page");
+            int curr_page = (int) maps1.get("curr_page");
+            Map<String,Object> filters = (Map<String, Object>) maps1.get("filters");
+            Map<String,Object> order = (Map<String, Object>) maps1.get("order");
+            SearchArgsMap searchArgsMap = new SearchArgsMap(filters,order);
+            // 解析查询参数
+            if (!searchArgsMap.MapTpArgsItem())  throw new RuntimeException();
+            // 解析排序方式
+            if (!searchArgsMap.MapToOrder(LogMessage.class)) throw new RuntimeException();
+
+            SearchArgs.ArgsItem argsItem = searchArgsMap.getArgsItem();
+            SearchArgs.Order order1 = searchArgsMap.getOrder();
+
+            Response<Map<String, Object>> search = this.logDevelopDaoService.search(argsItem, order1, per_page, curr_page);
+            return search;
+        }catch (Exception e) {
+            e.printStackTrace();
+            return new Response<>(Coco.ParamsError);
+        }
+    }
 
 }
