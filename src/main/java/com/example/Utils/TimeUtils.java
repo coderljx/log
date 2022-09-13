@@ -55,7 +55,7 @@ public class TimeUtils {
      * 对date 进行格式化，按照 yyyy-MM-dd HH:mm:ss 格式显示
      * @param date
      */
-    public static String ParseDate(Date date) throws ParseException {
+    public static String ParseDate(Date date) {
         String time = "yyyy-MM-dd HH:mm:ss";
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat(time);
         return simpleDateFormat.format(date);

@@ -75,10 +75,10 @@ public class Log implements Serializable {
     @Field (type= FieldType.Text)
     @Mapping
     private String createby;
-
-    @Field (type = FieldType.Date)
-    @Mapping
-    private Date createdate;
+//
+//    @Field (type = FieldType.Date)
+//    @Mapping
+//    private Date createdate;
 
     @Field (type = FieldType.Ip)
     @Mapping

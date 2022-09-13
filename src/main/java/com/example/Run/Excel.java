@@ -1,6 +1,7 @@
 package com.example.Run;
 
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
+import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -39,6 +40,7 @@ public class Excel {
     private static Row createRow(int RowNum) {
         if (workbook != null && sheet != null){
             row = sheet.createRow(RowNum);
+            row.setHeight((short) 550);
             return row;
         }
         return null;
@@ -50,7 +52,20 @@ public class Excel {
 
     private static void createCol(Row row, String... value) {
         for (int i = 0; i < value.length; i++) {
-            row.createCell(i).setCellValue(value[i]);
+            Cell cell = row.createCell(i);
+            cell.setCellValue(value[i]);
+            Sheet sheet = cell.getSheet();
+            int length = value[i].length();
+            if (length > 1 && length < 10) {
+                sheet.setColumnWidth(cell.getColumnIndex(), 3000);
+            }
+            if (length > 10 && length < 20) {
+                sheet.setColumnWidth(cell.getColumnIndex(), 5000);
+            }
+            if (length > 20) {
+                sheet.setColumnWidth(cell.getColumnIndex(), 8000);
+            }
+
         }
     }
 

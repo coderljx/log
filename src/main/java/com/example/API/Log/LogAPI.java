@@ -5,12 +5,14 @@ import com.example.Pojo.Model;
 import com.example.Run.Rocket;
 import com.example.Service.LogDaoService;
 import com.example.Utils.*;
+import org.apache.poi.ss.usermodel.Workbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.util.List;
@@ -164,5 +166,39 @@ public class LogAPI {
             return new Response<>(Coco.ParamsError);
         }
     }
+
+    /**
+     * 导出excel
+     * @param request
+     * @param response
+     */
+    @PostMapping("/export")
+    public void export(@RequestBody Map<String,Object> maps,HttpServletRequest request, HttpServletResponse response) {
+        try {
+            Map<String,Object> maps1 = (Map<String, Object>) maps.get("args");
+            int per_page = (int) maps1.get("per_page");
+            int curr_page = (int) maps1.get("curr_page");
+            Map<String,Object> filters = (Map<String, Object>) maps1.get("filters");
+            Map<String,Object> order = (Map<String, Object>) maps1.get("order");
+            SearchArgsMap searchArgsMap = new SearchArgsMap(filters,order);
+            // 解析查询参数
+            if (!searchArgsMap.MapTpArgsItem())  throw new RuntimeException();
+            // 解析排序方式
+            if (!searchArgsMap.MapToOrder(LogMessage.class)) throw new RuntimeException();
+
+            SearchArgs.ArgsItem argsItem = searchArgsMap.getArgsItem();
+            SearchArgs.Order order1 = searchArgsMap.getOrder();
+
+            response.setHeader("Content-Disposition", "attachment;fileName=" + "1.xls");// 设置文件名
+            response.setHeader("content-type", "application/vnd.ms-excel;charset=UTF-8");
+            Workbook export = this.logDevelopDaoService.export(argsItem, order1, per_page, curr_page);
+            export.write(response.getOutputStream());
+        }catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
+
 
 }

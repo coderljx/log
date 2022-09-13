@@ -5,9 +5,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-//@WebFilter(urlPatterns = "/api/**")
+//@WebFilter (urlPatterns = "/api/**")
 @Configuration
-public class Filter implements WebMvcConfigurer {
+public class Filter implements WebMvcConfigurer  {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
@@ -18,5 +18,6 @@ public class Filter implements WebMvcConfigurer {
                 .allowedHeaders("*")
                 .exposedHeaders("*");
     }
+
 }
 
