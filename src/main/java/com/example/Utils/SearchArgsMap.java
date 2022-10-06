@@ -36,6 +36,7 @@ public class SearchArgsMap {
      * @return
      * @throws Exception
      */
+    @SuppressWarnings("unchecked")
     public boolean MapTpArgsItem() throws ParseException, NoSuchFieldException, IllegalAccessException {
         if (this.filters == null) return false;
 
@@ -96,7 +97,7 @@ public class SearchArgsMap {
     /**
      * 获取Condition，从map中获取
      */
-    private List<SearchArgs.Condition> GetConditionFormMaps (List<Map<String,Object>> content) throws ParseException, NoSuchFieldException, IllegalAccessException {
+    private List<SearchArgs.Condition> GetConditionFormMaps (List<Map<String,Object>> content) throws NoSuchFieldException, IllegalAccessException {
         List<SearchArgs.Condition> list = new ArrayList<>();
         for (Map<String, Object> stringObjectMap : content) {
             SearchArgs.Condition t = new SearchArgs.Condition();

@@ -47,46 +47,36 @@ public class SJAPI {
     @SuppressWarnings("unchecked")
     public Response<?> Config(@RequestBody Map<String,Object> maps,
                             HttpServletRequest request){
+        Coco coco = null;
+        Response<?> response = null;
         Map<String, Object> payload = (Map<String, Object>) maps.get("payload");
-        if (payload == null)
-            return new Response<>(Coco.ParamsError);
-
-        SjMessage log;
+        if (payload == null){
+            throw new TypeException("请求参数不可为空");
+        }
         try {
             String date = (String) payload.get("recorddate");
             Timestamp timestamp = TimeUtils.ParseTimestamp(date);
             payload.put("recorddate",timestamp);
             payload.put("ipaddress", Maputil.GetIp(request));
-        } catch (Exception e) {
-            e.printStackTrace();
-            return new Response<>(Coco.ParamsTypeError);
-        }
+            Maputil.MapValiType(payload, SjMessage.class);
 
-        try {
-            boolean Validation = Maputil.MapValiType(payload, SjMessage.class);
-            if (!Validation)
-                return new Response<>(Coco.ParamsError);
-
-            boolean b = Maputil.MapNotNull(payload, SjMessage.class);
-            if (!b)
-                return new Response<>(Coco.ParamsNullError);
-
-            log = Maputil.MapToObject(payload, SjMessage.class);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return new Response<>(Coco.ParamsError);
-        }
-
-        if (log == null)
-            return new Response<>(Coco.ParamsError);
-
-        try {
+            Maputil.MapNotNull(payload, SjMessage.class);
+            SjMessage log = Maputil.MapToObject(payload, SjMessage.class);
             this.rocket.Send(Topic,"config",log);
-            return new Response<>();
+            coco = Coco.ok;
+        } catch (ParseException | IllegalAccessException e) {
+            e.printStackTrace();
+            coco.message = e.getMessage();
+            coco.code = -101;
+        } catch (TypeException typeException){
+            coco.message = typeException.getMessage();
+            coco.code = -102;
         }catch ( Exception e){
-            return new Response<>(Coco.ServerError);
+           coco = Coco.ServerError;
+        }finally {
+            response = new Response<>(coco);
         }
-
+        return response;
     }
 
 
@@ -97,6 +87,9 @@ public class SJAPI {
     @SuppressWarnings("unchecked")
     @PostMapping("/search/likemutil")
     public  Response<?> searchEsotoMutil(@RequestBody Map<String,Object> maps)   {
+        Map<String, Object>  mapResponse = null;
+        Coco coco = null;
+        Response<?> response = null;
         try {
             Map<String,Object> maps1 = (Map<String, Object>) maps.get("args");
             int per_page = (int) maps1.get("per_page");
@@ -110,15 +103,17 @@ public class SJAPI {
             if (!searchArgsMap.MapToOrder(SjMessage.class)) throw new RuntimeException();
             SearchArgs.ArgsItem argsItem = searchArgsMap.getArgsItem();
             SearchArgs.Order order1 = searchArgsMap.getOrder();
-             Map<String, Object>  mapResponse = this.comptrollerService.SearchMutisj(argsItem, order1, per_page, curr_page);
-            return new Response<>(mapResponse);
+            mapResponse = this.comptrollerService.SearchMutisj(argsItem, order1, per_page, curr_page);
         }  catch (ParseException | IllegalAccessException | NoSuchFieldException e) {
             e.printStackTrace();
-            return new Response<>(Coco.ParamsTypeError);
+            coco = Coco.ParamsTypeError;
         } catch (ExceptionInInitializerError e) {
             e.printStackTrace();
-            return new Response<>(Coco.IndexNameNotFound);
+            coco = Coco.IndexNameNotFound;
+        } finally {
+            response = new Response<>(coco,mapResponse);
         }
+        return response;
     }
 
 

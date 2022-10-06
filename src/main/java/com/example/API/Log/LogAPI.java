@@ -5,6 +5,7 @@ import com.example.Pojo.Model;
 import com.example.Run.Rocket;
 import com.example.Service.LogDaoService;
 import com.example.Utils.*;
+import jdk.nashorn.internal.runtime.regexp.joni.constants.CCSTATE;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,7 +25,6 @@ public class LogAPI {
     private final Logger mylog = LoggerFactory.getLogger(LogAPI.class);
     private final Rocket rocket;
     private final LogDaoService logDevelopDaoService;
-    private final String Topic = "log";
 
 
     @Autowired()
@@ -42,27 +42,29 @@ public class LogAPI {
     @SuppressWarnings ({"unchecked"})
     public Response<?> create (@RequestBody Map<String, Object> maps,
                             HttpServletRequest request){
+        Coco coco = null;
+        Response<?> response = null;
         Map<String, Object> payload = (Map<String, Object>) maps.get("payload");
-        if (payload == null)  return new Response<>(Coco.ParamsError);
+        if (payload == null)  {
+            throw new TypeException("请求参数不可为空");
+        }
 
         final String[] tag1 = {"trace", "info", "warn", "error", "fatal"};
         final String[] tag =  {"正常","轻微","一般","严重","非常严重"};
+
         try {
             String date = (String) payload.get("recorddate");
-            Timestamp timestamp = TimeUtils.ParseTimestamp(date);
+            Timestamp timestamp =  TimeUtils.ParseTimestamp(date);
             payload.put("recorddate",timestamp);
-            // ip在前端接口中是没有传递的，如果不手动设置，则无法通过验证
             payload.put("ipaddress", Maputil.GetIp(request));
-            boolean Valitation = Maputil.MapValiType(payload, LogMessage.class);
-            if (!Valitation) return new Response<>(Coco.ParamsError);
-
-            boolean Null = Maputil.MapNotNull(payload,LogMessage.class);
-            if (!Null) return new Response<>(Coco.ParamsNullError);
+            Maputil.MapValiType(payload, LogMessage.class);
+            Maputil.MapNotNull(payload,LogMessage.class);
 
             LogMessage log;
             log = Maputil.MapToObject(payload, LogMessage.class);
-            if (log == null) return new Response<>(Coco.ParamsError);
-
+            if (log == null) {
+                throw new TypeException("转换错误");
+            }
             int i = -1;
             String level = log.getLevel();
             for (int i1 = 0; i1 < tag.length; i1++) {
@@ -71,18 +73,25 @@ public class LogAPI {
                     break;
                 }
             }
-            if (i == -1) return new Response<>(Coco.LogTypeError);
-            try {
-                this.rocket.Send(Topic,tag1[i],log);
-                return new Response<>();
-            }catch (Exception e) {
-                e.printStackTrace();
-                return new Response<>(Coco.ServerError);
+            if (i == -1){
+                throw new TypeException("日志等级超出系统规范");
             }
-        } catch (ParseException | IllegalAccessException e) {
+            String topic = "log";
+            this.rocket.Send(topic,tag1[i],log);
+            coco = Coco.ok;
+        } catch (ParseException e) {
             e.printStackTrace();
-            return new Response<>(Coco.ParamsTypeError);
+            coco.message = e.getMessage();
+            coco.code = -101;
+        } catch (TypeException typeException){
+            coco.message = typeException.getMessage();
+            coco.code = -100;
+        } catch (Exception e) {
+            coco = Coco.ServerError;
+        } finally {
+            response = new Response<>(coco);
         }
+        return response;
     }
 
 
@@ -92,15 +101,20 @@ public class LogAPI {
      * @return
      */
     @GetMapping("/model")
-    @SuppressWarnings ({"unchecked"})
     public Response<?> Model(){
+        Coco coco = null;
+        List<Model> moudel = null;
+        Response<?> response = null;
         try {
-            List<Model> moudel = this.logDevelopDaoService.Moudel();
-            return new Response<>(moudel);
+            moudel = this.logDevelopDaoService.Moudel();
         } catch (Exception e) {
             e.printStackTrace();
-            return new Response<>(Coco.ParamsTypeError);
+           coco.message = e.getMessage();
+           coco.code = -102;
+        }finally {
+            response = new Response<>(coco,moudel);
         }
+        return response;
     }
 
 
@@ -144,6 +158,8 @@ public class LogAPI {
     @PostMapping ("/delete/likemutil")
     @SuppressWarnings ({"unchecked"})
     public Response<?> delete(@RequestBody Map<String,Object> maps) {
+        Response<?> response = null;
+        Coco coco = null;
         try {
             Map<String,Object> maps1 = (Map<String, Object>) maps.get("args");
             int per_page = (int) maps1.get("per_page");
@@ -160,11 +176,14 @@ public class LogAPI {
             SearchArgs.Order order1 = searchArgsMap.getOrder();
 
             this.logDevelopDaoService.delete(argsItem,order1,per_page,curr_page);
-            return new Response<>();
-        }catch (Exception e) {
+            coco = Coco.ok;
+        } catch (Exception e) {
             e.printStackTrace();
-            return new Response<>(Coco.ParamsError);
+            coco = Coco.ParamsError;
+        } finally {
+           response = new Response<>(coco);
         }
+        return response;
     }
 
     /**
@@ -173,6 +192,7 @@ public class LogAPI {
      * @param response
      */
     @PostMapping("/export")
+    @SuppressWarnings ({"unchecked"})
     public void export(@RequestBody Map<String,Object> maps,HttpServletRequest request, HttpServletResponse response) {
         try {
             Map<String,Object> maps1 = (Map<String, Object>) maps.get("args");

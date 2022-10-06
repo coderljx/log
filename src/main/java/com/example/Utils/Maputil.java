@@ -107,7 +107,6 @@ public class Maputil {
             }else {
                 declaredField.set(newInstance,null);
             }
-            //mylog.info(declaredField + " : " + maps.get(declaredField.getName()));
         }
         return newInstance;
     }
@@ -210,8 +209,7 @@ public class Maputil {
      * @param maps 需要验证的map集合
      * @param type Bean对象
      */
-    public static <T,V> boolean MapValiType(Map<String,T> maps , Class<V> type) {
-        int num = 0;
+    public static <T,V> boolean MapValiType(Map<String,T> maps , Class<V> type) throws TypeException {
         Field[] declaredFields = GetField(type);
         if (declaredFields == null)
             return false;
@@ -219,20 +217,17 @@ public class Maputil {
         for (Field declaredField : declaredFields) {
             // 如果bean的字段在map中不存在，验证失败
             if (maps.get(declaredField.getName()) == null){
-                num++;
-                break;
+                throw new TypeException("缺少字段 : " + declaredField.getName());
             }
             Class<?> type1 = declaredField.getType();
             T t = maps.get(declaredField.getName());
             // 判断map中的值类型是否可以向上转型成为 类定义的字段类型,验证接口的数据类型是否与定义的bean类型一致
             boolean equals = type1.isAssignableFrom(t.getClass());
             if (!equals) {
-                num ++;
-                break;
+                throw new TypeException("字段类型异常 : " + declaredField.getName());
             }
-            //mylog.info("验证字段 ： " + declaredField.getName() + "   验证结果 : " + equals);
         }
-        return num == 0;
+        return true;
     }
 
 
@@ -240,7 +235,7 @@ public class Maputil {
      * 验证值是否为空, 有些字段必须要有值,
      * map中的key要与bean 字段对应，如果字段对不上 验证失败
      */
-    public static <T,V> boolean MapNotNull(Map<String,T> maps , Class<V> type) {
+    public static <T,V> boolean MapNotNull(Map<String,T> maps , Class<V> type) throws TypeException{
         int num = 0;
         Field[] declaredFields = GetField(type);
         if (declaredFields == null)
@@ -248,8 +243,7 @@ public class Maputil {
 
         for (Field declaredField : declaredFields) {
             if (maps.get(declaredField.getName()) == null) {
-                num++;
-                break;
+                throw new TypeException("字段不能为空 : " + declaredField.getName());
             }
             boolean annotationPresent = declaredField.isAnnotationPresent(NotNull.class);
             if (annotationPresent){
@@ -260,21 +254,19 @@ public class Maputil {
                     if (t instanceof String){
                        String t1 = ((String) t).trim();
                        if (t1.equals("")) {
-                           num++;
-                           break;
+                           throw new TypeException("字段不能为空 : " + declaredField.getName());
                        }
                     }
                     if (t instanceof Date) {
                         Date t1 = (Timestamp) t;
                          if (t1.getTime() == 0L){
-                             num++;
-                             break;
+                             throw new TypeException("字段不能为空 : " + declaredField.getName());
                          }
                     }
                 }
             }
         }
-        return num == 0;
+        return true;
     }
 
 
@@ -355,7 +347,7 @@ public class Maputil {
     public static String GetIp(HttpServletRequest request){
         String result = null;
         String header = request.getHeader("X-Forwarded-For");
-        if (header != null && header.length() != 0 && header.contains(",")){
+        if (header != null && header.contains(",")){
             result = header.split(",")[0];
         }
         if (header == null || header.length() == 0) {
