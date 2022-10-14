@@ -64,8 +64,6 @@ public class SJAPI {
 
             Maputil.MapNotNull(payload, SjMessage.class);
             SjMessage log = Maputil.MapToObject(payload, SjMessage.class);
-            this.rocket.Send(Topic,"config",log);
-
             this.rocket.AsyncSend(Topic,"config",log,new SendCallback(){
                 @Override
                 public void onSuccess(SendResult sendResult) {
@@ -75,8 +73,6 @@ public class SJAPI {
                     throw new TypeException(throwable.getMessage());
                 }
             });
-
-
             coco = Coco.ok;
         } catch (ParseException | IllegalAccessException e) {
             e.printStackTrace();
