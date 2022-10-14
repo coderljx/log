@@ -1,6 +1,5 @@
 package com.example.Run;
 
-import com.example.Utils.Maputil;
 import com.example.Utils.SearchArgs;
 import com.example.Utils.TimeUtils;
 import org.elasticsearch.index.query.BoolQueryBuilder;
@@ -90,7 +89,7 @@ public class EsTemplate {
      * @return
      * @throws ParseException
      */
-    public <T> SearchHits<T> SearchLikeMutil4(BoolQueryBuilder boolQueryBuilder,RangeQueryBuilder rangeQueryBuilder, PageRequest pageRequest,Sort sort, Class<T> cls,String... IndexName)
+    public <T> SearchHits<T> SearchLikeMutil4(BoolQueryBuilder boolQueryBuilder, PageRequest pageRequest,Sort sort, Class<T> cls,String... IndexName)
             throws ParseException, ExceptionInInitializerError {
         IndexName = this.filterIndexName(IndexName);
         if (IndexName.length == 0) {
@@ -99,15 +98,6 @@ public class EsTemplate {
         NativeSearchQuery nativeSearchQuery = this.GenNativeSearchQuery(boolQueryBuilder, pageRequest, sort);
         return elasticsearchRestTemplate.search(nativeSearchQuery,cls,IndexCoordinates.of(IndexName));
     }
-
-
-
-
-
-
-
-// ----------------------   分隔符  -------------------
-
 
     /**
      * 检查该es库是否存在
@@ -120,38 +110,6 @@ public class EsTemplate {
         elasticsearchRestTemplate.save(cls,IndexCoordinates.of(IndexName));
         return false;
     }
-
-
-    /**
-     * 构建时间查询条件
-     * @return
-     */
-    public RangeQueryBuilder GenRangeQueryBuilder(List<SearchArgs.Condition> children) throws ParseException {
-        RangeQueryBuilder rangeQueryBuilder = null;
-        String[] time = new String[2];
-        for (SearchArgs.Condition child : children) {
-            String filed = child.getField();
-            String operator = child.getOperator();
-            if (operator != null) {
-                if (operator.equals("ge")) {
-                    time[0] = child.getValue();
-                    continue;
-                }
-                if (operator.equals("le")){
-                    time[1] = child.getValue();
-                }
-            }
-            if (time[0] != null && time[1] != null){
-                long start = TimeUtils.Parselong(time[0]);
-                long end = TimeUtils.Parselong(time[1]);;
-                rangeQueryBuilder = new RangeQueryBuilder(filed);
-                rangeQueryBuilder.gte(start);
-                rangeQueryBuilder.lte(end);
-            }
-        }
-        return rangeQueryBuilder;
-    }
-
 
     /**
      * 生产一个模糊查询
@@ -197,6 +155,8 @@ public class EsTemplate {
     public BoolQueryBuilder GenBoolQueryBuilder(){
         return new BoolQueryBuilder();
     }
+
+
     /**
      * 生成一个bool查询
      * @param matchQueryBuilder
@@ -253,52 +213,6 @@ public class EsTemplate {
 
 
 
-    /**
-     * 多条件模糊查询, 适用log
-     * 对系统名称进行去重复，只返回appname字段
-     */
-    public <T> SearchHits<T> SearchLikeMutil3(SearchArgs.ArgsItem argsItem, SearchArgs.Order order, int size, int page, Class<T> cls,String...  IndexName) throws ParseException {
-        IndexName = this.filterIndexName(IndexName);
-        if (IndexName.length == 0) {
-            return null;
-        }
-        BoolQueryBuilder boolQueryBuilder = null;
-        SourceFilter sourceFilter = null;
-        List<SearchArgs.Condition> children = argsItem.getChildren();
-        for (SearchArgs.Condition child : children) {
-            String field =  child.getField();
-            String operator = child.getOperator();
-            String value =  child.getValue();
-            if (field.equals("appname") && value.equals("")) {
-                boolQueryBuilder = new BoolQueryBuilder();
-                sourceFilter = this.sourceFilter(field);
-            }
-            if (field.equals("appname") && !value.equals("")) {
-
-            }
-            if(operator != null){
-                boolQueryBuilder = new BoolQueryBuilder();
-                RangeQueryBuilder rangeQueryBuilder = this.GenRangeQueryBuilder(children);
-                boolQueryBuilder.must(rangeQueryBuilder);
-            }
-        }
-        if (boolQueryBuilder == null) return null;
-
-        Sort.Direction sor;
-        if (order.getOrder_type() == null) {
-            sor = Sort.Direction.DESC;
-        }else {
-            sor = order.getOrder_type().equals("ASC") ? Sort.Direction.ASC : Sort.Direction.DESC;
-        }
-        NativeSearchQuery build;
-        if (sourceFilter != null) {
-            // 如果不是空，代表传入的是appname查询系统名称，则只查询系统名称
-            build = this.GenNativeSearchQuery(boolQueryBuilder,PageRequest.of(page,size),Sort.by(sor,order.getField()),sourceFilter,Maputil.ReplaceAddKeyword("appname"));
-        }else {
-            build = this.GenNativeSearchQuery(boolQueryBuilder,PageRequest.of(page,size),Sort.by(sor,order.getField()),Maputil.ReplaceAddKeyword("appname"));
-        }
-        return elasticsearchRestTemplate.search(build,cls,IndexCoordinates.of(IndexName));
-    }
 
     /**
      * 删除数据

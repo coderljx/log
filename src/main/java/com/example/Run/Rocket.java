@@ -59,8 +59,9 @@ public class Rocket {
 
             this.template.asyncSend(Links, Content, callback);
         }
-
     }
+
+
 
     /**
      * 生产者发送的消息按照队列进行发送，

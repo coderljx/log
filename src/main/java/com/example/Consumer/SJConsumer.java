@@ -31,7 +31,6 @@ public class SJConsumer implements RocketMQListener<MessageExt> {
             log.info(data);
             comptroller parsecomptroller = JSONObject.parseObject(data, comptroller.class);
             this.comptrollerService.Insertsj(parsecomptroller);
-
     }
 
 }

@@ -188,11 +188,11 @@ public class LogDaoService {
             SearchHits<Log> searchHits = this.SearchResout(argsItem, order, per_page, curr_page, "");
             parse = this.Parse(searchHits);
         }
-        Workbook workbook = Excel.CreateHeader("", "系统名称", "日志等级", "IP地址", "日志信息", "访问时间");
+        Workbook workbook = Excel.CreateHeader("", "系统名称", "日志等级", "IP地址", "日志信息", "访问时间","事件类型");
         for (LogReturn logReturn : parse) {
             Excel.CreateData(
                     logReturn.getAppname(), logReturn.getLevel(),logReturn.getIpaddress(),
-                    logReturn.getLogmessage(),logReturn.getRecorddate()
+                    logReturn.getLogmessage(),logReturn.getRecorddate(), logReturn.getEventype()
             );
         }
         return workbook;
@@ -285,9 +285,6 @@ public class LogDaoService {
             logReturn.setRecorddate(newdate);
             datas.add(logReturn);
         }
-//        Map<String, Object> res = new HashMap<>();
-//        res.put("data", datas);
-//        res.put("total", Math.toIntExact(totalHits));
         return datas;
     }
 

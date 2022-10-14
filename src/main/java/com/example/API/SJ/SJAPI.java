@@ -5,6 +5,8 @@ import com.example.Run.Rocket;
 import com.example.Service.ComptrollerService;
 import com.example.Utils.*;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.rocketmq.client.producer.SendCallback;
+import org.apache.rocketmq.client.producer.SendResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,6 +65,18 @@ public class SJAPI {
             Maputil.MapNotNull(payload, SjMessage.class);
             SjMessage log = Maputil.MapToObject(payload, SjMessage.class);
             this.rocket.Send(Topic,"config",log);
+
+            this.rocket.AsyncSend(Topic,"config",log,new SendCallback(){
+                @Override
+                public void onSuccess(SendResult sendResult) {
+                }
+                @Override
+                public void onException(Throwable throwable) {
+                    throw new TypeException(throwable.getMessage());
+                }
+            });
+
+
             coco = Coco.ok;
         } catch (ParseException | IllegalAccessException e) {
             e.printStackTrace();

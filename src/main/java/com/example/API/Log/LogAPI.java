@@ -5,8 +5,9 @@ import com.example.Pojo.Model;
 import com.example.Run.Rocket;
 import com.example.Service.LogDaoService;
 import com.example.Utils.*;
-import jdk.nashorn.internal.runtime.regexp.joni.constants.CCSTATE;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.rocketmq.client.producer.SendCallback;
+import org.apache.rocketmq.client.producer.SendResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -77,7 +78,16 @@ public class LogAPI {
                 throw new TypeException("日志等级超出系统规范");
             }
             String topic = "log";
-            this.rocket.Send(topic,tag1[i],log);
+            this.rocket.AsyncSend(topic, tag1[i], log, new SendCallback() {
+                @Override
+                public void onSuccess(SendResult sendResult) {
+                }
+
+                @Override
+                public void onException(Throwable throwable) {
+                    throw new TypeException(throwable.getMessage());
+                }
+            });
             coco = Coco.ok;
         } catch (ParseException e) {
             e.printStackTrace();
