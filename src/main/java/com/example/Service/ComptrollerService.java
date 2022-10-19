@@ -7,7 +7,10 @@ import com.example.Pojo.comptrollerReturn;
 import com.example.Run.ESproperties;
 import com.example.Run.EsTemplate;
 import com.example.Run.Excel;
-import com.example.Utils.*;
+import com.example.Utils.Maputil;
+import com.example.Utils.ModelReturn;
+import com.example.Utils.SearchArgs;
+import com.example.Utils.TimeUtils;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.MatchQueryBuilder;
@@ -24,14 +27,12 @@ import org.springframework.stereotype.Component;
 
 import java.text.ParseException;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
 
 @Component
 public class ComptrollerService {
     private final Logger mylog = LoggerFactory.getLogger(ComptrollerService.class);
     private final com.example.Dao.comptrollerDao comptrollerDao;
     private final EsTemplate esTemplate;
-    private final ExecutorService executorService;
     private final ESproperties eSproperties;
     private final Class<comptroller> cls = comptroller.class;
 
@@ -41,11 +42,9 @@ public class ComptrollerService {
     @Autowired
     public ComptrollerService(comptrollerDao comptrollerDao,
                               EsTemplate esTemplate,
-                              ExecutorService executorService,
                               ESproperties eSproperties) {
         this.comptrollerDao = comptrollerDao;
         this.esTemplate = esTemplate;
-        this.executorService = executorService;
         this.eSproperties = eSproperties;
     }
 

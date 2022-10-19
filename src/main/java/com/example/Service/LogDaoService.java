@@ -24,7 +24,6 @@ import org.springframework.stereotype.Service;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
 
 @Service
 public class LogDaoService {
@@ -33,7 +32,6 @@ public class LogDaoService {
     private final Email email;
     private final EmailProperties emailProperties;
     private final ESproperties eSproperties;
-    private final ExecutorService executorService;
     private final String[] values = new String[]{"全部", "正常", "轻微", "一般", "严重", "非常严重"};
     private final Class<Log> cls = Log.class;
 
@@ -45,12 +43,10 @@ public class LogDaoService {
             EsTemplate esTemplate,
             EmailProperties emailProperties,
             ESproperties eSproperties,
-            ExecutorService executorService,
             Email email) {
         this.esTemplate = esTemplate;
         this.emailProperties = emailProperties;
         this.eSproperties = eSproperties;
-        this.executorService = executorService;
         this.email = email;
     }
 
